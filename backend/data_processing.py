@@ -23,9 +23,7 @@ client = QdrantClient(
     timeout=60.0
 )
 
-# all_dict should be managed, possibly passed as argument or returned from add_vectors
-# For now, keeping as is based on your original file structure
-all_dict = {} # This will be the global all_dict used within data_processing.py
+
 
 def remove_same_files(folder):
     import re
@@ -36,31 +34,6 @@ def remove_same_files(folder):
         resume = resume.rstrip('.pdf')
         if re.search(pattern,resume):
             print('Copy : ',resume)
-
-# --- ADD THIS FUNCTION TO data_processing.py ---
-def clean_data(all_dict_param):
-    '''
-    Removes duplicated from the unique json file
-    takes and returns all_dict which is later saved to unique.json
-    '''
-    for k,v in all_dict_param.items():
-        if type(v) == list:
-            # Filter out empty strings and keep unique values
-            all_dict_param[k] = [i for i in list(set(v)) if i !=""]
-    return all_dict_param
-# --- END OF ADDITION ---
-
-def process_data(all_dict_param): # Renamed parameter to avoid shadowing global all_dict
-    for k,v in all_dict_param.items():
-        if type(v) == list:
-            for indx,val in enumerate(v):
-                if v == '': # This condition 'if v == ''' inside loop for val is suspicious.
-                            # It should probably be `if val == ''`.
-                            # The clean_data function already handles removing empty strings and duplicates better.
-                    v.pop(indx)
-            all_dict_param[k] = [i for i in v if i !='']
-            all_dict_param[k]= list(set(all_dict_param[k]))
-    return all_dict_param
 
 
 def basic_text_normalization(text: str) -> str:
@@ -127,7 +100,6 @@ def llm_create_metadata(resume:str,resume_name):
         "skills_total_keywords": "Union of all skills-apis,frameworks,databases,languages,cloud-hosting,devtools,no job positions,other non cs skills too(flat comma-separated string)",
 
         "spoken_languages": "Fluent or proficient languages (comma-separated string)",
-        "interests_or_hobbies": "Hobbies or personal interests (comma-separated string)",
 
         "availability_for_joining": "Availability to join (e.g., 'Immediate', '1 Month') (string)",
         
@@ -169,10 +141,8 @@ def add_vectors():
     '''
     Reads all the resumes in the resumes folder extracts text and calls function to generate metadata 
     then converts the resume into a vector and save it into the resume collection along with their respective metadatas.
-    Also creates all_dict dictionary which has all the unique values for each payload key
     '''
-    
-    global all_dict # This needs to be explicitly declared global to modify the module-level all_dict
+
     convert_all_docs_in_folder("resumes")
     resumes = os.listdir('resumes')
     all_vec = client.scroll(collection_name='resumes',with_payload=['source'],limit=1000000)
@@ -249,14 +219,6 @@ def add_vectors():
                 except ValueError: # Catch specific error for int conversion
                     metadata_dict[k] = "" # Set to empty string on failure
             
-            # This part updates the GLOBAL all_dict
-            if k in all_dict: # Use 'in' operator to check if key exists
-                if isinstance(v, list): # If incoming value is a list, extend
-                    all_dict[k].extend(v)
-                elif isinstance(v, (str, int, float)): # If scalar, append
-                    all_dict[k].append(v)
-            else:
-                all_dict[k] = [v] # Initialize as a list with the current value
 
             # Normalizing case for string values in metadata_dict for consistency
             if isinstance(v, str):
@@ -280,8 +242,7 @@ def add_vectors():
             )
         print(operation_info)
     
-    # Process the GLOBAL all_dict after all resumes are added
-    all_dict = process_data(all_dict)
+
 
 
 def delete_collection():

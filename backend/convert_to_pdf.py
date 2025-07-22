@@ -30,25 +30,3 @@ def convert_all_docs_in_folder(folder_path):
             os.remove(file_path)
 
 
-def create_unique(client,all_dict):
-    all_vec = client.scroll(collection_name='resumes',with_payload=True,limit=1000000)[0]
-    print(len(all_vec))
-
-    for vec in all_vec:
-        for k,v in vec.payload.items():
-            if k !="page_content":
-                print('Key&Value: ',k, v)
-                if all_dict.get(k,False) == [] or all_dict.get(k,False):
-                    print('IN')
-                    print('Value Type:',type(v))
-                    if type(v) == str or type(v)==int or type(v)==float:
-                        if v not in all_dict[k]:
-                            print('append')
-                            all_dict[k].append(v)
-                    elif type(v)==list:
-                        print('extend')
-                        all_dict[k].extend(v)
-                    
-                else:
-                    all_dict[k] = []
-    return all_dict
