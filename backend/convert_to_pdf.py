@@ -1,0 +1,54 @@
+import subprocess
+import os
+
+def convert_with_libreoffice(input_path):
+    if not os.path.isfile(input_path):
+        print(f"File not found: {input_path}")
+        return
+
+    if not input_path.lower().endswith(('.doc', '.docx')):
+        print(f"Skipped unsupported file: {input_path}")
+        return
+
+    output_dir = os.path.dirname(input_path)
+
+    subprocess.run([
+        "soffice",
+        "--headless",
+        "--convert-to", "pdf",
+        "--outdir", output_dir,
+        input_path
+    ])
+    print(f"Converted: {input_path}")
+
+# 🔄 Convert all .doc and .docx files in a folder
+def convert_all_docs_in_folder(folder_path):
+    for filename in os.listdir(folder_path):
+        if filename.lower().endswith(('.doc', '.docx')):
+            file_path = os.path.join(folder_path, filename)
+            convert_with_libreoffice(file_path)
+            os.remove(file_path)
+
+
+def create_unique(client,all_dict):
+    all_vec = client.scroll(collection_name='resumes',with_payload=True,limit=1000000)[0]
+    print(len(all_vec))
+
+    for vec in all_vec:
+        for k,v in vec.payload.items():
+            if k !="page_content":
+                print('Key&Value: ',k, v)
+                if all_dict.get(k,False) == [] or all_dict.get(k,False):
+                    print('IN')
+                    print('Value Type:',type(v))
+                    if type(v) == str or type(v)==int or type(v)==float:
+                        if v not in all_dict[k]:
+                            print('append')
+                            all_dict[k].append(v)
+                    elif type(v)==list:
+                        print('extend')
+                        all_dict[k].extend(v)
+                    
+                else:
+                    all_dict[k] = []
+    return all_dict

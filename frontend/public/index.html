@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResumeRAG - AI Resume Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Your existing CSS styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        body.light-mode {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(circle at 20% 80%, rgba(64, 64, 64, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(96, 96, 96, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(128, 128, 128, 0.2) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+            transition: all 0.3s ease;
+        }
+
+        body.light-mode::before {
+            background:
+                radial-gradient(circle at 20% 80%, rgba(200, 200, 255, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 200, 255, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(200, 255, 255, 0.2) 0%, transparent 50%);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        body.light-mode .header {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+            background: linear-gradient(45deg, #ffffff, #d1d5db);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        body.light-mode .header h1 {
+            color: #1f2937;
+            background: linear-gradient(45deg, #1f2937, #374151);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        body.light-mode .header p {
+            color: rgba(31, 41, 55, 0.7);
+        }
+
+        /* Theme Toggle Button */
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 10px 15px;
+            color: white;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        body.light-mode .theme-toggle {
+            background: rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            color: #1f2937;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        body.light-mode .theme-toggle:hover {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .main-content {
+            display: flex;
+            gap: 20px;
+            flex: 1;
+            min-height: 600px;
+        }
+
+        .upload-section {
+            flex: 0 0 350px;
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            height: fit-content; /* Ensure it wraps content */
+        }
+
+        body.light-mode .upload-section {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-section h3 {
+            color: white;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        body.light-mode .upload-section h3 {
+            color: #1f2937;
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body.light-mode .upload-area {
+            border: 2px dashed rgba(0, 0, 0, 0.3);
+        }
+
+        .upload-area:hover {
+            border-color: rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateY(-2px);
+        }
+
+        body.light-mode .upload-area:hover {
+            border-color: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 15px;
+        }
+
+        body.light-mode .upload-icon {
+            color: rgba(31, 41, 55, 0.7);
+        }
+
+        .upload-text {
+            color: white;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+
+        body.light-mode .upload-text {
+            color: #1f2937;
+        }
+
+        .upload-subtext {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+        }
+
+        body.light-mode .upload-subtext {
+            color: rgba(31, 41, 55, 0.6);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .uploaded-files {
+            margin-top: 20px;
+        }
+
+        .file-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: slideInUp 0.3s ease;
+        }
+        body.light-mode .file-item {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-icon {
+            color: #4ade80;
+            font-size: 1.2rem;
+        }
+
+        .file-name {
+            color: white;
+            font-weight: 500;
+        }
+        body.light-mode .file-name {
+            color: #1f2937;
+        }
+
+        .chat-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        body.light-mode .chat-section {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-header {
+            padding: 20px 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        body.light-mode .chat-header {
+            background: rgba(0, 0, 0, 0.05);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-header h3 {
+            color: white;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        body.light-mode .chat-header h3 {
+            color: #1f2937;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            min-height: 400px;
+            max-height: 500px;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            animation: fadeInMessage 0.5s ease;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message-bubble {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            position: relative;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        body.light-mode .message-bubble {
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+
+        .message.user .message-bubble {
+            background: rgba(120, 119, 198, 0.3);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+        body.light-mode .message.user .message-bubble {
+            background: rgba(120, 119, 198, 0.15);
+            color: #1f2937;
+        }
+
+        .message.bot .message-bubble {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border-bottom-left-radius: 5px;
+        }
+        body.light-mode .message.bot .message-bubble {
+            background: rgba(0, 0, 0, 0.08);
+            color: #1f2937;
+        }
+
+
+        .message-time {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 5px;
+            color: inherit; /* Inherit color from bubble */
+        }
+
+        .download-button {
+            background: linear-gradient(45deg, #4ade80, #06d6a0);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(74, 222, 128, 0.3);
+        }
+
+        .download-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(74, 222, 128, 0.4);
+        }
+        .download-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+
+        .chat-input-area {
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        body.light-mode .chat-input-area {
+            background: rgba(0, 0, 0, 0.05);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+
+        .chat-input-container {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 15px 20px;
+            color: white;
+            font-size: 1rem;
+            resize: none;
+            min-height: 50px;
+            max-height: 120px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        body.light-mode .chat-input {
+            background: rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            color: #1f2937;
+        }
+
+
+        .chat-input:focus {
+            outline: none;
+            border-color: rgba(120, 119, 198, 0.5);
+            box-shadow: 0 0 20px rgba(120, 119, 198, 0.2);
+        }
+
+        .chat-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        body.light-mode .chat-input::placeholder {
+            color: rgba(31, 41, 55, 0.5);
+        }
+
+
+        .send-button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        /* New Styles for Search Input and Slider */
+        .search-inputs {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        body.light-mode .search-inputs {
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        .search-inputs label {
+            color: white;
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        body.light-mode .search-inputs label {
+            color: #1f2937;
+        }
+        .search-inputs textarea, .search-inputs input[type="text"] {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        body.light-mode .search-inputs textarea, body.light-mode .search-inputs input[type="text"] {
+            background: rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            color: #1f2937;
+        }
+        .search-inputs textarea:focus, .search-inputs input[type="text"]:focus {
+            outline: none;
+            border-color: rgba(120, 119, 198, 0.5);
+            box-shadow: 0 0 10px rgba(120, 119, 198, 0.2);
+        }
+        .search-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        .search-buttons button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        .search-buttons .search-jd-button {
+            background: linear-gradient(45deg, #4CAF50, #8BC34A); /* Green gradient */
+            color: white;
+        }
+        .search-buttons .search-jd-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+        .search-buttons .search-query-button {
+            background: linear-gradient(45deg, #2196F3, #03A9F4); /* Blue gradient */
+            color: white;
+        }
+        .search-buttons .search-query-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+        }
+        .search-buttons button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .slider-container {
+            margin-top: 15px;
+            margin-bottom: 20px;
+        }
+        .slider-container input[type="range"] {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            -webkit-appearance: none;
+            appearance: none;
+            cursor: pointer;
+            outline: none;
+        }
+        body.light-mode .slider-container input[type="range"] {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea; /* Purple accent */
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.4);
+        }
+        .slider-container input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea; /* Purple accent */
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.4);
+        }
+
+
+        @keyframes fadeInMessage {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            border-bottom-left-radius: 5px;
+            max-width: 100px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        body.light-mode .typing-indicator {
+            background: rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.7);
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        body.light-mode .typing-dot {
+            background: rgba(31, 41, 55, 0.7);
+        }
+
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typing {
+            0%, 80%, 100% {
+                transform: scale(0);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+           
+            .upload-section {
+                flex: none;
+                width: 100%; /* Take full width on small screens */
+            }
+           
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .message-bubble {
+                max-width: 90%;
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            padding: 50px 20px;
+        }
+        body.light-mode .empty-state {
+            color: rgba(31, 41, 55, 0.6);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+        .error-message {
+            background: rgba(255, 0, 0, 0.1);
+            color: #ffcccc;
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        body.light-mode .error-message {
+            background: rgba(255, 0, 0, 0.05);
+            color: #b91c1c;
+            border-color: #ef4444;
+        }
+        .success-message {
+            background: rgba(0, 255, 0, 0.1);
+            color: #ccffcc;
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-weight: 500;
+        }
+        body.light-mode .success-message {
+            background: rgba(0, 255, 0, 0.05);
+            color: #16a34a;
+            border-color: #22c55e;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" onclick="toggleTheme()">
+                <span id="themeIcon">🌙</span> <span id="themeText">Dark Mode</span>
+            </button>
+            <h1>ResumeRAG</h1>
+            <p>Upload resumes and chat with our AI assistant to find the perfect candidates</p>
+        </div>
+
+        <div class="main-content">
+            <div class="upload-section">
+                <h3>Upload Resumes</h3>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text">Drop files here or click to browse</div>
+                    <div class="upload-subtext">Supports PDF, DOC, DOCX files</div>
+                </div>
+                <input type="file" id="fileInput" class="file-input" multiple accept=".pdf,.doc,.docx">
+                <button id="processUploadButton" class="download-button" style="margin-top:20px; width:100%; padding:12px;">Process Uploaded Resumes</button>
+                <div id="uploadStatusMessage" class="success-message" style="display:none;"></div>
+                <div class="uploaded-files" id="uploadedFilesList"></div>
+            </div>
+
+            <div class="chat-section">
+                <div class="chat-header">
+                    <h3>💬 Chat with AI Assistant</h3>
+                </div>
+               
+                <div class="chat-messages" id="chatMessages">
+                    <div class="empty-state" id="initialEmptyState">
+                        <div class="empty-state-icon">🤖</div>
+                        <p>Start by uploading some resumes, then ask me anything!</p>
+                        <p style="margin-top: 10px; font-size: 0.9rem;">Try: "Find candidates with Python experience" or "Show me resumes with 5+ years experience"</p>
+                    </div>
+                </div>
+
+                <div class="chat-input-area">
+                    <div id="chatErrorMessage" class="error-message" style="display:none;"></div>
+                    <div class="search-inputs">
+                        <label for="jobDescriptionInput">Job Description:</label>
+                        <textarea id="jobDescriptionInput" placeholder="Paste Job Description here..." rows="4"></textarea>
+
+                        <label for="generalQueryInput">General Query:</label>
+                        <input type="text" id="generalQueryInput" placeholder="e.g., Find candidates with strong NLP skills">
+
+                        <div class="slider-container">
+                            <label for="kValueInput">Number of Results (k): <span id="kValueDisplay">5</span></label>
+                            <input type="range" id="kValueInput" min="1" max="20" value="5">
+                        </div>
+
+                        <div class="search-buttons">
+                            <button id="searchJdButton" class="search-jd-button">Search by JD</button>
+                            <button id="searchQueryButton" class="search-query-button">Search by Query</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000';
+
+        // DOM Elements
+        const body = document.body;
+        const themeIcon = document.getElementById('themeIcon');
+        const themeText = document.getElementById('themeText');
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const processUploadButton = document.getElementById('processUploadButton');
+        const uploadStatusMessage = document.getElementById('uploadStatusMessage');
+        const uploadedFilesList = document.getElementById('uploadedFilesList');
+        const chatMessagesContainer = document.getElementById('chatMessages');
+        const initialEmptyState = document.getElementById('initialEmptyState');
+        const jobDescriptionInput = document.getElementById('jobDescriptionInput');
+        const generalQueryInput = document.getElementById('generalQueryInput');
+        const kValueInput = document.getElementById('kValueInput');
+        const kValueDisplay = document.getElementById('kValueDisplay');
+        const searchJdButton = document.getElementById('searchJdButton');
+        const searchQueryButton = document.getElementById('searchQueryButton');
+        const chatErrorMessage = document.getElementById('chatErrorMessage');
+
+        let currentUploadedFiles = []; // Files selected by user but not yet processed by backend
+        let filesReadyForDownload = []; // Files retrieved from backend search
+
+        // --- Theme Toggle ---
+        function toggleTheme() {
+            body.classList.toggle('light-mode');
+            if (body.classList.contains('light-mode')) {
+                themeIcon.textContent = '☀️';
+                themeText.textContent = 'Light Mode';
+                localStorage.setItem('theme', 'light');
+            } else {
+                themeIcon.textContent = '🌙';
+                themeText.textContent = 'Dark Mode';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                body.classList.add('light-mode');
+                themeIcon.textContent = '☀️';
+                themeText.textContent = 'Light Mode';
+            }
+        }
+        loadTheme();
+
+        // --- File Upload Logic ---
+        uploadArea.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (event) => {
+            currentUploadedFiles = Array.from(event.target.files);
+            renderUploadedFiles();
+        });
+
+        function renderUploadedFiles() {
+            uploadedFilesList.innerHTML = ''; // Clear previous list
+            if (currentUploadedFiles.length > 0) {
+                initialEmptyState.style.display = 'none'; // Hide initial welcome message
+                currentUploadedFiles.forEach(file => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.innerHTML = `
+                        <div class="file-info">
+                            <span class="file-icon">📄</span>
+                            <span class="file-name">${file.name}</span>
+                        </div>
+                        <button class="remove-file-btn" data-filename="${file.name}" style="background: none; border: none; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 1.2rem;">×</button>
+                    `;
+                    uploadedFilesList.appendChild(fileItem);
+                });
+                // Add event listeners for new remove buttons
+                document.querySelectorAll('.remove-file-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const fileName = e.target.dataset.filename;
+                        currentUploadedFiles = currentUploadedFiles.filter(file => file.name !== fileName);
+                        renderUploadedFiles(); // Re-render the list
+                        if (currentUploadedFiles.length === 0) {
+                            initialEmptyState.style.display = 'block'; // Show empty state if no files left
+                        }
+                    });
+                });
+            } else {
+                initialEmptyState.style.display = 'block';
+            }
+        }
+
+        processUploadButton.addEventListener('click', async () => {
+            if (currentUploadedFiles.length === 0) {
+                displayMessage(chatErrorMessage, "Please select files to upload first.", true);
+                return;
+            }
+
+            processUploadButton.disabled = true;
+            processUploadButton.textContent = 'Processing...';
+            displayMessage(uploadStatusMessage, "", false); // Clear previous status
+            displayMessage(chatErrorMessage, "", false); // Clear previous error
+
+            const formData = new FormData();
+            currentUploadedFiles.forEach(file => {
+                formData.append('files', file);
+            });
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/upload_resumes`, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    displayMessage(uploadStatusMessage, data.message, true, 'success');
+                    addMessage("Resumes uploaded and processed successfully! You can now ask questions.", 'bot');
+                    currentUploadedFiles = []; // Clear selection after successful processing
+                    renderUploadedFiles(); // Update UI to show no pending uploads
+                } else {
+                    displayMessage(chatErrorMessage, data.error || "Failed to upload and process files.", true, 'error');
+                    addMessage("Failed to process uploaded resumes. Please check console for details.", 'bot');
+                }
+            } catch (err) {
+                console.error("Network error during file upload:", err);
+                displayMessage(chatErrorMessage, "Network error during file upload. Backend might not be running.", true, 'error');
+                addMessage("Network error during resume upload. Is the backend running?", 'bot');
+            } finally {
+                processUploadButton.disabled = false;
+                processUploadButton.textContent = 'Process Uploaded Resumes';
+            }
+        });
+
+        // --- Chat & Search Logic ---
+        kValueInput.addEventListener('input', () => {
+            kValueDisplay.textContent = kValueInput.value;
+        });
+
+        searchJdButton.addEventListener('click', () => handleSearch(true));
+        searchQueryButton.addEventListener('click', () => handleSearch(false));
+
+        async function handleSearch(isJDSearch) {
+            let queryText = '';
+            if (isJDSearch) {
+                queryText = jobDescriptionInput.value.trim();
+                if (!queryText) {
+                    displayMessage(chatErrorMessage, "Please paste a Job Description to search.", true);
+                    return;
+                }
+            } else {
+                queryText = generalQueryInput.value.trim();
+                if (!queryText) {
+                    displayMessage(chatErrorMessage, "Please enter a general query to search.", true);
+                    return;
+                }
+            }
+
+            // Disable buttons and show loading
+            setSearchLoading(true);
+            displayMessage(chatErrorMessage, "", false); // Clear previous errors
+
+            // Add user message to chat
+            addMessage(queryText, 'user');
+            jobDescriptionInput.value = ''; // Clear input fields
+            generalQueryInput.value = '';
+
+            // Show typing indicator
+            const typingIndicator = showTypingIndicator();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/search`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: queryText,
+                        k: parseInt(kValueInput.value),
+                        is_jd_search: isJDSearch,
+                    }),
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    hideTypingIndicator(typingIndicator);
+                    addMessage(data.answer, 'bot', data.selected_files);
+                } else {
+                    hideTypingIndicator(typingIndicator);
+                    displayMessage(chatErrorMessage, data.error || "Search failed.", true, 'error');
+                    addMessage("I'm sorry, I couldn't process that request. Please try again.", 'bot');
+                }
+            } catch (err) {
+                hideTypingIndicator(typingIndicator);
+                console.error("Network error during search:", err);
+                displayMessage(chatErrorMessage, "Network error during search. Backend might not be running.", true, 'error');
+                addMessage("Network error. Is the backend running?", 'bot');
+            } finally {
+                setSearchLoading(false);
+            }
+        }
+
+        function setSearchLoading(isLoading) {
+            searchJdButton.disabled = isLoading;
+            searchQueryButton.disabled = isLoading;
+            jobDescriptionInput.disabled = isLoading;
+            generalQueryInput.disabled = isLoading;
+            kValueInput.disabled = isLoading;
+            // You can add more visual feedback here if needed
+        }
+
+        function addMessage(content, sender, filesToDownload = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+           
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+           
+            let downloadButtonHTML = '';
+            if (filesToDownload && filesToDownload.length > 0) {
+                filesReadyForDownload = filesToDownload; // Store files for global download
+                downloadButtonHTML = `<button class="download-button" onclick="downloadResume()">📥 Download Selected Resumes (${filesToDownload.length})</button>`;
+            } else {
+                filesReadyForDownload = []; // Clear if no files for current response
+            }
+           
+            messageDiv.innerHTML = `
+                <div class="message-bubble">
+                    ${content.replace(/\n/g, '<br>')}
+                    ${downloadButtonHTML}
+                    <div class="message-time">${time}</div>
+                </div>
+            `;
+           
+            chatMessagesContainer.appendChild(messageDiv);
+            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight; // Scroll to bottom
+        }
+
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message bot';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="typing-indicator" style="display: block;">
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            `;
+            chatMessagesContainer.appendChild(typingDiv);
+            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+            return typingDiv; // Return the element to hide it later
+        }
+
+        function hideTypingIndicator(indicatorElement) {
+            if (indicatorElement) {
+                indicatorElement.remove();
+            }
+        }
+
+        async function downloadResume() {
+            if (filesReadyForDownload.length === 0) {
+                displayMessage(chatErrorMessage, "No resumes available for download from the last search.", true);
+                return;
+            }
+
+            // Disable button during download
+            const downloadButton = document.querySelector('.download-button');
+            if (downloadButton) downloadButton.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/download_resumes`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ files: filesReadyForDownload }),
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'selected_resumes.zip';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                    addMessage("Resumes downloaded successfully! 📥", 'bot');
+                } else {
+                    const errorData = await response.json();
+                    displayMessage(chatErrorMessage, errorData.error || "Failed to download resumes.", true, 'error');
+                    addMessage("Failed to download resumes.", 'bot');
+                }
+            } catch (err) {
+                console.error("Network error during download:", err);
+                displayMessage(chatErrorMessage, "Network error during download. Backend might not be running.", true, 'error');
+                addMessage("Network error during download. Is the backend running?", 'bot');
+            } finally {
+                if (downloadButton) downloadButton.disabled = false;
+            }
+        }
+
+        function displayMessage(element, message, show, type = 'error') {
+            element.textContent = message;
+            element.className = type === 'success' ? 'success-message' : 'error-message';
+            element.style.display = show ? 'block' : 'none';
+        }
+
+        // --- Initial Welcome Message ---
+        // Add a welcome message after a short delay only if no files are initially selected
+        // This is now handled by the empty state in HTML, but if you want a chat bubble welcome:
+        setTimeout(() => {
+            if (currentUploadedFiles.length === 0 && document.getElementById('initialEmptyState').style.display === 'block') {
+                // This checks if the empty state is visible, implying no files loaded yet
+                addMessage("Welcome to ResumeRAG! 👋 Start by uploading resumes via the left panel, then ask me questions about them.", 'bot');
+            }
+        }, 1500);
+
+    </script>
+</body>
+</html>

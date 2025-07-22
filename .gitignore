@@ -1,0 +1,7 @@
+venv
+resumes
+resumes_backup
+__pycache__
+__pycache__ copy
+.idea
+.env
