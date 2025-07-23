@@ -34,7 +34,7 @@ const Message = ({ content, sender, time, isLoading = false, onDownload, hasDown
             {hasDownloadButton && (
               <button
                 onClick={() => onDownload(filesToDownload)}
-                className="mt-3 px-3 py-1 bg-hiremind-accent-green text-white font-medium rounded-lg text-sm shadow-md hover:bg-hiremind-accent-green/80 transition"
+                className="mt-3 px-3 py-1 bg-hiremind-accent-green text-black font-medium rounded-lg text-sm shadow-md hover:bg-hiremind-accent-green/80 transition"
               >
                 📥 Download Selected Resumes ({filesToDownload.length})
               </button>

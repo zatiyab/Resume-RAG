@@ -1,6 +1,7 @@
 # backend/app/core/config.py (UPDATED & CONSOLIDATED)
 import os
 from dotenv import load_dotenv
+from langchain_cohere import ChatCohere
 
 load_dotenv() # Load environment variables from .env
 

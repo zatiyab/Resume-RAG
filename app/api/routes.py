@@ -9,6 +9,13 @@ from app.crud.user_crud import user_crud
 from app.services.auth_service import AuthService
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 from asyncpg.exceptions import DuplicatePreparedStatementError # Still import for retry, even if it's not direct source
+from fastapi import APIRouter, Request, Depends
+from sqlalchemy.orm import Session
+from app.schemas.req_models import ChatPost, ChatResponse
+from app.services.chat import (post_chat_messages,
+                               upload_all_resumes,
+                               get_resumes_zip)
+from app.core.database import SessionLocal
 
 auth_router = APIRouter()
 
@@ -48,6 +55,7 @@ async def signup_user(user_in: UserCreate, db: Session = Depends(get_db)): # <--
             detail="An unexpected server error occurred during signup. Please try again."
         )
 
+<<<<<<< HEAD
 @auth_router.post("/login")
 @retry_db_exception
 async def login_user(user_in: UserLogin, auth_service: AuthService = Depends(get_auth_service)): # <--- Change type hint to Session
@@ -69,3 +77,21 @@ async def login_user(user_in: UserLogin, auth_service: AuthService = Depends(get
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected server error occurred during login."
         )
+=======
+
+router = APIRouter()
+
+@router.post("/chat")
+async def post_chat(request:ChatPost,db:Session = Depends(get_db)):
+    print(request)
+    return await post_chat_messages(request,db)
+
+
+@router.post("/download_resumes")
+async def resumes_link(request:Request):
+    return await get_resumes_zip(request)
+
+@router.post("/upload_resumes")
+async def upload_resumes(request:Request):
+    return await upload_all_resumes(request)
+>>>>>>> backend-integrate-branch

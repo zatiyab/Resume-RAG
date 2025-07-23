@@ -22,3 +22,11 @@ def add_chat(user_id,role,content,session_id,db):
     db.refresh(chat_record)
     return chat_record
 
+
+def get_last_history(user_id, db):
+    return (
+        db.query(History.history)
+        .filter(History.user_id == user_id)
+        .order_by(History.created_at.desc())
+        .first()  # instead of limit(1)
+    )
