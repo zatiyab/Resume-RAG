@@ -33,6 +33,13 @@ module.exports = {
           'accent-purple': '#8E6CEF', // Soft Purple
           'accent-green': '#4CAF50',  // Standard Green
           'accent-blue': '#3498DB',   // Standard Blue
+
+          // New Colors for Auth Page Design
+          'purple-primary': '#6B21A8', // Deep Purple (for background)
+          'purple-accent': '#8B5CF6', // Lighter Purple (for buttons, icons)
+          'light-bg-card': '#F9FAFB', // Very light off-white for the auth card background
+          'input-bg-light': '#F3F4F6', // Light gray for input field background
+          'input-border-light': '#D1D5DB', // Light gray for input field border
         },
       },
       fontFamily: {

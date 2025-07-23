@@ -1,21 +1,24 @@
 // frontend/HireMind/src/App.js
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar.jsx';
 import ChatWindow from './components/ChatWindow.jsx';
 import MessageInput from './components/MessageInput.jsx';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext.jsx';
 import { searchResumes, downloadResumes, uploadResumes as apiUploadResumes } from './services/api';
 
-// Main App component wrapped with ThemeProvider
-function App() {
-  const { theme } = useTheme();
+import AuthPage from './pages/AuthPage.jsx';
+
+
+function DashboardAppUI() {
+  const { theme, toggleTheme } = useTheme(); // useTheme provides theme and toggleTheme
+
   const [messages, setMessages] = useState([]);
   const [isSending, setIsSending] = useState(false);
-  const [currentChatId, setCurrentChatId] = useState('new'); // To simulate chat sessions
-  const [chatSessions, setChatSessions] = useState([{ id: 'new', name: 'New Chat' }]); // Simplified chat history
+  const [currentChatId, setCurrentChatId] = useState('new');
+  const [chatSessions, setChatSessions] = useState([{ id: 'new', name: 'New Chat' }]);
 
   useEffect(() => {
-    // Initial welcome message
     if (messages.length === 0 && currentChatId === 'new') {
       const welcomeMessage = {
         content: "Welcome to HireMind! 👋 I'm your AI Recruitment Assistant. Upload resumes using the left sidebar, or paste a Job Description/ask a query in the input box below.",
@@ -25,7 +28,7 @@ function App() {
       setMessages([welcomeMessage]);
     }
   }, [messages, currentChatId]);
-
+    
   const handleSendMessage = async (text, isJDSearch, kValue) => {
     const newMessage = {
       content: text,
@@ -134,11 +137,10 @@ function App() {
     }
   };
 
-
   return (
     // Set overall app background and primary text color based on theme
-    // Body par 'dark' class ThemeContext.jsx mein useTheme ke useEffect se lag rahi hai
-    <div className={`flex h-screen overflow-hidden ${theme === 'dark' ? 'bg-hiremind-bg-dark text-hiremind-text-dark-primary' : 'bg-hiremind-bg-light text-hiremind-text-light-primary'}`}>
+    <div className={`flex h-screen overflow-hidden 
+      ${theme === 'dark' ? 'bg-hiremind-bg-dark text-hiremind-text-dark-primary' : 'bg-hiremind-bg-light text-hiremind-text-light-primary'}`}>
       <Sidebar
         onNewChat={handleNewChat}
         onChatSelect={handleChatSelect}
@@ -146,9 +148,9 @@ function App() {
         onBulkUploadFiles={handleBulkUploadFiles}
       />
       <div className="flex flex-col flex-1">
-        <header className={`p-4 text-center text-3xl font-extrabold tracking-wide shadow-xl border-b font-heading
-          ${theme === 'dark'
-            ? 'bg-hiremind-element-dark text-hiremind-text-dark-primary border-white/10 shadow-hiremind-darkblue/40'
+        <header className={`p-4 text-center text-3xl font-extrabold tracking-wide shadow-xl border-b 
+          ${theme === 'dark' 
+            ? 'bg-hiremind-element-dark text-hiremind-text-dark-primary border-white/10 shadow-hiremind-darkblue/40' 
             : 'bg-hiremind-element-light text-hiremind-text-light-primary border-black/10 shadow-hiremind-darkblue/10'}`}>
           HireMind: AI Resume Assistant
         </header>
@@ -156,6 +158,21 @@ function App() {
         <MessageInput onSendMessage={handleSendMessage} onUploadFiles={handleBulkUploadFiles} isSending={isSending} />
       </div>
     </div>
+  );
+}
+
+
+function App() {
+  const navigate = useNavigate(); // Hook to programmatically navigate
+  return (
+    <ThemeProvider> {/* ThemeProvider wraps the entire app */}
+      <Routes>
+        <Route path="/" element={<DashboardAppUI />} />
+        <Route path="/auth" element={<AuthPage />} /> {/* New route for AuthPage */}
+        {/* Redirect to main app if path not found (optional) */}
+        <Route path="*" element={<DashboardAppUI />} />
+      </Routes>
+    </ThemeProvider>
   );
 }
 
