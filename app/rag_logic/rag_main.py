@@ -3,14 +3,14 @@ from app.services.qdrant_client import (client,
                                         initialize_app_data,
                                         add_vectors,
                                         add_history)
+from app.crud.db_crud import get_last_history
 import zipfile
 from io import BytesIO
-
 from langchain.schema.runnable import RunnableMap
 from langchain.prompts import PromptTemplate
 from app.core.config import llm
 # --- MAIN STREAMLIT APPLICATION LOGIC ---
-def main(k, user_query):
+def main(k, user_query,hist_id,user_id,db):
     print('\n\n\n')
     print('-'*100)
     print("--- MAIN FUNCTION STARTED ---")
@@ -30,16 +30,17 @@ def main(k, user_query):
     sorted_history_points = sorted(history_all_points, key=lambda p: int(p.id), reverse=True)
     # Get last 2 history points (or more if desired for context)
     actual_last_history_items = sorted_history_points[:2] 
-    
+    selected_files = []
     # final_history_for_llm_prompt = "\n".join([p.payload['history'] for p in actual_last_history_items if 'history' in p.payload])
+    final_history_for_llm_prompt =get_last_history(user_id,db)[0]
     try:
-        final_history_for_llm_prompt = actual_last_history_items[0].payload['history']
+        final_history_for_llm_prompt = get_last_history(user_id,db)[0]
     except:
         final_history_for_llm_prompt = ""
     print(f"--- DEBUG: Prepared History Context Length: {len(final_history_for_llm_prompt)} ---")
 
     
-    if ("he" in user_query) or ("his" in user_query) or ("him" in user_query) or ("her" in user_query) or ("she" in user_query) :
+    if ("he" in user_query.split(" ")) or ("his" in user_query.split(" ")) or ("him" in user_query.split(" ")) or ("her" in user_query.split(" ")) or ("she" in user_query.split(" ")) :
         retrieved_resume_context = ""
         try:
             history_resume_context = final_history_for_llm_prompt.split("History Document Context:")[-1]
@@ -51,17 +52,15 @@ def main(k, user_query):
             print("History broke")
         print('No user')
     
-    elif ("they" in user_query) or ("their" in user_query) or ("them" in user_query) or ("these" in user_query):
+    elif ("they" in user_query.split(" ")) or ("their" in user_query.split(" ")) or ("them" in user_query) or ("these" in user_query):
         retrieved_resume_context = ""
         try:
             history_resume_context = final_history_for_llm_prompt.split("History Document Context:")[-1]
         except:
             print("History broke")
         print('No user')
-
-
     else:
-    # --- Step 2: Retrieve Relevant Resumes (for "Candidate Context" in prompt) ---
+        # --- Step 2: Retrieve Relevant Resumes (for "Candidate Context" in prompt) ---
         print(f"--- DEBUG: Calling get_relevant_docs with processed query: '{user_query}' ---")
         retrieved_resume_context,selected_files = get_relevant_docs(user_query=user_query, collection='resumes', k=k)
         print(f"--- DEBUG: Retrieved Resume Context Length: {len(retrieved_resume_context)} ---")
@@ -158,6 +157,7 @@ If fewer candidates match than requested, provide only the exact number found. I
     
     # --- Resume Download Logic ---
     zip_buffer = None 
+    
     if selected_files != []:
         print(f"--- DEBUG: Files selected for download: {selected_files} ---")
         import os
@@ -176,17 +176,17 @@ If fewer candidates match than requested, provide only the exact number found. I
         zip_buffer.seek(0)
     else:
         print("--- DEBUG: No files retrieved for download or session state empty. ---")
-
+   
     # --- Add to History ---
     if result and result.content:
         history_entry = f"""User: {original_user_input}
 Assistant: {result.content}
 History Document Context: {history_resume_context}"""
-        add_history(history_entry)
+        add_history(history_entry,hist_id)
         print("--- DEBUG: History entry added. ---")
     else:
         print("--- DEBUG: No meaningful result to add to history. ---")
     last_context = history_resume_context
     print("Last Context")
     
-    return history_entry, zip_buffer ,selected_files
+    return result.content, history_entry, zip_buffer ,selected_files

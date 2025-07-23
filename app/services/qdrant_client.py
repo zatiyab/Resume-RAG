@@ -201,12 +201,12 @@ def add_vectors():
     return operation_info
     
 
-def add_history(history_text: str):
+def add_history(history_text: str,hist_id):
     '''
     Get history for the LLM chatbot and converts it into a vector
     and also add it to the vector history db and prints the result of the upsert operation
     '''
-    global hist_id
+
     vector = embedding.encode(history_text)
     point = PointStruct(id=hist_id, vector=vector, payload={"created_at": datetime.datetime.utcnow().isoformat(),
                        'history':history_text})
@@ -215,7 +215,7 @@ def add_history(history_text: str):
             wait=True,
             points=[point]
         )
-    hist_id+=1
+
     print(f"--- DEBUG: History Added: {operation_info} ---")
 
 
@@ -239,7 +239,7 @@ def get_relevant_docs(user_query, collection,k=5):
     search_result = client.query_points(
         collection_name=collection,
         query=embedding.encode(('Represent this sentence for retrieval: ' + user_query).lower()),
-        limit=k
+        limit=int(k)
     )
     
     results = search_result.model_dump()
@@ -279,6 +279,8 @@ def get_relevant_docs(user_query, collection,k=5):
 
 
 def initialize_app_data():
+    print("--- Deleting History data... ---")
+    client.delete_collection(collection_name="history")
     print("--- Initializing collections and data... ---")
 
     if not client.collection_exists("resumes"):
@@ -311,5 +313,4 @@ def initialize_app_data():
     print("--- Initial app data setup complete. ---")
 
 
-if __name__ == "__main__":
-    initialize_app_data()
+initialize_app_data()

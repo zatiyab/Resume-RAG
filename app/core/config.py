@@ -1,7 +1,5 @@
 import os
 from dotenv import load_dotenv
-from qdrant_client import QdrantClient
-from langchain.embeddings import HuggingFaceEmbeddings
 from langchain_cohere import ChatCohere
 
 

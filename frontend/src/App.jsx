@@ -48,7 +48,7 @@ function DashboardAppUI() {
       setMessages((prev) => {
         const updatedMessages = prev.filter(msg => !msg.isLoading); // Remove typing indicator
         const botResponse = {
-          content: data.answer || "I couldn't find a relevant answer.",
+          content: data.response || "I couldn't find a relevant answer.",
           sender: 'bot',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           hasDownloadButton: data.selected_files && data.selected_files.length > 0,
