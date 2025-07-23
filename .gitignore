@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 venv
 resumes
 resumes_backup
@@ -6,7 +5,6 @@ __pycache__
 __pycache__ copy
 .idea
 .env
-=======
 # .gitignore
 # Python
 __pycache__/
@@ -43,4 +41,3 @@ Thumbs.db       # Windows specific
 # Resumes (if directly in root or backend/)
 resumes/
 unique.json
->>>>>>> origin/hiremind-ui-initial

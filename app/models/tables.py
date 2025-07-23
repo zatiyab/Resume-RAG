@@ -23,3 +23,4 @@ class History(Base):
     session_id = Column(UUID(as_uuid=True), primary_key=True, nullable=False)
     created_at = Column(DateTime(timezone=True), primary_key=True, default=datetime.utcnow)
     history = Column(Text, nullable=False)     # entire history content (e.g., summarized or full)
+
