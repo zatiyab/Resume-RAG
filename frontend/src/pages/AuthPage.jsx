@@ -6,7 +6,7 @@ import { useTheme } from '../contexts/ThemeContext.jsx'; // Import useTheme
 import SignUpForm from '../components/SignUpForm.jsx'; // Assuming forms are in components
 import LoginForm from '../components/LoginForm.jsx';
 
-const AuthPage = () => {
+const AuthPage = ({ onLoginSuccess }) => {
   const { theme } = useTheme(); // Get theme for background colors
   const [isSignUp, setIsSignUp] = useState(true); // State to switch between Sign Up and Login
 
@@ -27,8 +27,9 @@ const AuthPage = () => {
           {isSignUp ? 'Sign Up' : 'Login'}
         </h2>
 
-        {isSignUp ? <SignUpForm /> : <LoginForm />}
-
+        {isSignUp ? 
+            <SignUpForm setIsSignUp={setIsSignUp} /> : // Pass setIsSignUp to SignUpForm
+            <LoginForm onLoginSuccess={onLoginSuccess} />}
         <div className="text-center mt-6">
           <p className="text-sm">
             {isSignUp ? 'Already have an account?' : 'Don\'t have an account?'}{' '}

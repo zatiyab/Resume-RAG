@@ -36,6 +36,24 @@ export const downloadResumes = async (files) => {
   return response.blob(); // Returns blob for file download
 };
 
-// You might need an API to fetch chat history from the backend if you store it per chat session
-// export const getChatHistory = async (chatId) => { ... }
-// export const startNewChat = async () => { ... }
+export const signupUser = async (userData) => {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/signup`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(userData),
+  });
+  return response.json(); 
+};
+
+export const loginUser = async (credentials) => {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(credentials),
+  });
+  return response.json();
+};
