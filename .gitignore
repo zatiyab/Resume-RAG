@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 venv
 resumes
 resumes_backup
@@ -5,3 +6,41 @@ __pycache__
 __pycache__ copy
 .idea
 .env
+=======
+# .gitignore
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+lib/
+# Debugging stuff
+*.log
+*.sqlite3
+*.db
+dist/
+build/
+*.egg-info/
+.coverage
+.tox/
+
+# Node.js / React Frontend
+node_modules/
+dist/          # Vite build output
+.env           # Environment variables (API keys)
+.vite/         # Vite cache directory
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.parcel-cache/
+.DS_Store       # macOS specific
+Thumbs.db       # Windows specific
+.vscode/        # VSCode settings (optional, if you want to keep them local)
+
+# Resumes (if directly in root or backend/)
+resumes/
+unique.json
+>>>>>>> origin/hiremind-ui-initial

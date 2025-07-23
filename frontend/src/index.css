@@ -1,0 +1,370 @@
+/* frontend/src/index.css */
+@import "tailwindcss";
+
+/* Define CSS Variables for your custom theme colors */
+:root {
+    /* Dark Mode (Default) */
+    --hiremind-darkblue: #1A2B3C;
+    --hiremind-beige: #F5F0E1;
+    --hiremind-light-bg: #FDFBF6; /* Lighter background for light mode */
+    --hiremind-light-end: #E9E5DE; /* End gradient for light mode */
+    --hiremind-dark-gradient-start: #0f0f0f; /* Original dark gradient start */
+    --hiremind-dark-gradient-end: #1a1a1a;   /* Original dark gradient end */
+    --hiremind-sidebar-dark: #0B151F;
+    --hiremind-sidebar-light: #FFFFFF;
+    --hiremind-element-dark: #23384D;
+    --hiremind-element-light: #E9E5DE; /* Beige for elements in light mode */
+    --hiremind-text-dark-primary: #F5F0E1;
+    --hiremind-text-dark-secondary: #B0AFAF;
+    --hiremind-text-light-primary: #1A2B3C;
+    --hiremind-text-light-secondary: #5A6B7C;
+    --hiremind-accent-purple: #8E6CEF;
+    --hiremind-accent-green: #4CAF50;
+    --hiremind-accent-blue: #3498DB;
+
+    /* Message Bubble specific colors (translucent based on accents) */
+    --message-bubble-bg-user-dark: rgba(142, 108, 239, 0.3); /* hiremind-accent-purple transparent */
+    --message-bubble-bg-bot-dark: rgba(255, 255, 255, 0.15); /* White transparent */
+    --message-bubble-bg-user-light: rgba(142, 108, 239, 0.15); /* hiremind-accent-purple transparent */
+    --message-bubble-bg-bot-light: rgba(0, 0, 0, 0.08); /* Black transparent */
+
+    /* Scrollbar colors */
+    --scrollbar-track-dark: #23384D; /* Using hiremind-element-dark directly */
+    --scrollbar-thumb-dark: #5A6B7C; /* Using hiremind-text-light-secondary for contrast */
+    --scrollbar-track-light: #E9E5DE; /* Using hiremind-element-light */
+    --scrollbar-thumb-light: #B0AFAF; /* Using hiremind-text-dark-secondary */
+
+    /* Error & Success Messages */
+    --error-bg-dark: rgba(255, 0, 0, 0.1);
+    --error-text-dark: #ffcccc;
+    --error-border-dark: rgba(255, 0, 0, 0.3);
+    --error-bg-light: rgba(255, 0, 0, 0.05);
+    --error-text-light: #b91c1c;
+    --error-border-light: #ef4444;
+
+    --success-bg-dark: rgba(0, 255, 0, 0.1);
+    --success-text-dark: #ccffcc;
+    --success-border-dark: rgba(0, 255, 0, 0.3);
+    --success-bg-light: rgba(0, 255, 0, 0.05);
+    --success-text-light: #16a34a;
+    --success-border-light: #22c55e;
+}
+
+/* Global base styles */
+* {
+    margin: 0.1;
+    padding: 0.1;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+    transition: all 0.3s ease;
+    /* Background handled by App.jsx, font handled by Tailwind's font-inter class */
+}
+
+/* Background gradients (particles) - these use hardcoded RGBA values from original design */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        radial-gradient(circle at 20% 80%, rgba(64, 64, 64, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(96, 96, 96, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(128, 128, 128, 0.2) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: -1;
+    transition: all 0.3s ease;
+}
+body.light::before { /* light class applied by App.jsx to body */
+    background:
+        radial-gradient(circle at 20% 80%, rgba(200, 200, 255, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 200, 255, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(200, 255, 255, 0.2) 0%, transparent 50%);
+}
+
+/* Header H1 gradient (specific styling) - hardcoded gradient */
+.header h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+    background: linear-gradient(45deg, #ffffff, #d1d5db);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+body.light .header h1 {
+    background: linear-gradient(45deg, var(--hiremind-text-light-primary), #374151); /* Uses CSS var for light primary */
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Download Button (custom gradient) */
+.download-button {
+    background: linear-gradient(45deg, var(--hiremind-accent-green), #06d6a0); /* Uses CSS var for green accent */
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    margin-top: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(74, 222, 128, 0.3);
+}
+.download-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(74, 222, 128, 0.4);
+}
+.download-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--hiremind-element-dark); /* Using direct hiremind color */
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--hiremind-text-light-secondary); /* Using direct hiremind color */
+  border-radius: 4px;
+}
+body.light .custom-scrollbar::-webkit-scrollbar-track {
+    background: var(--hiremind-element-light); /* Using direct hiremind color */
+}
+body.light .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--hiremind-text-dark-secondary); /* Using direct hiremind color */
+}
+
+/* File selector button - previously @apply, now hardcoded values/vars */
+input[type="file"]::file-selector-button {
+  margin-right: 1rem;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  border: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background-color: var(--hiremind-accent-blue); /* Uses CSS var */
+  color: white;
+  cursor: pointer;
+}
+input[type="file"]::file-selector-button:hover {
+  background-color: rgba(33, 150, 243, 0.8);
+}
+
+/* Animations */
+@keyframes fadeInMessage {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+@keyframes typing {
+    0%, 80%, 100% {
+        transform: scale(0);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Responsive (from previous styles) */
+@media (max-width: 768px) {
+    .main-content {
+        flex-direction: column;
+    }
+    .upload-section {
+        flex: none;
+        width: 100%;
+    }
+    .header h1 {
+        font-size: 2rem;
+    }
+    .message-bubble {
+        max-width: 90%;
+    }
+}
+
+/* Status Messages - using CSS variables now */
+.error-message {
+    background: var(--error-bg-dark);
+    color: var(--error-text-dark);
+    border: 1px solid var(--error-border-dark);
+    padding: 10px 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    font-weight: 500;
+}
+body.light .error-message {
+    background: var(--error-bg-light);
+    color: var(--error-text-light);
+    border-color: var(--error-border-light);
+}
+.success-message {
+    background: var(--success-bg-dark);
+    color: var(--success-text-dark);
+    border: 1px solid var(--success-border-dark);
+    padding: 10px 15px;
+    border-radius: 10px;
+    margin-top: 15px;
+    font-weight: 500;
+}
+body.light .success-message {
+    background: var(--success-bg-light);
+    color: var(--success-text-light);
+    border-color: var(--success-border-light);
+}
+
+/* Specific component styles that were previously generic Tailwind */
+/* These were mostly moved into component JSX as Tailwind classes directly */
+/* Keeping placeholder if needed for future specific overrides */
+.upload-section h3,
+.upload-icon,
+.upload-text,
+.upload-subtext,
+.file-name,
+.chat-header h3,
+.empty-state,
+.empty-state-icon,
+.search-inputs label,
+.search-inputs textarea,
+.search-inputs input[type="text"],
+.search-inputs input[type="text"]::placeholder {
+    /* These were typically handled by Tailwind text-colors/bg-colors directly in JSX */
+}
+
+/* chat-input specific */
+.chat-input::placeholder {
+    color: var(--placeholder-color-dark-mode);
+}
+body.light .chat-input::placeholder {
+    color: var(--placeholder-color-light-mode);
+}
+/* Basic common styles that are hard to do with only Tailwind classes */
+.chat-input-container {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+}
+.chat-input:focus {
+    outline: none;
+    border-color: rgba(120, 119, 198, 0.5);
+    box-shadow: 0 0 20px rgba(120, 119, 198, 0.2);
+}
+.send-button {
+    border: none;
+    border-radius: 12px;
+    padding: 15px 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+.send-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+.send-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+.search-buttons {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+    justify-content: center;
+}
+.search-buttons button {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+.search-buttons button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+.slider-container input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.4);
+    background: var(--hiremind-accent-purple); /* Uses CSS var */
+}
+.slider-container input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.4);
+    background: var(--hiremind-accent-purple); /* Uses CSS var */
+}
+
+/* Status Messages - using CSS variables now */
+.error-message {
+    background: var(--error-bg-dark);
+    color: var(--error-text-dark);
+    border: 1px solid var(--error-border-dark);
+    padding: 10px 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    font-weight: 500;
+}
+body.light .error-message {
+    background: var(--error-bg-light);
+    color: var(--error-text-light);
+    border-color: var(--error-border-light);
+}
+.success-message {
+    background: var(--success-bg-dark);
+    color: var(--success-text-dark);
+    border: 1px solid var(--success-border-dark);
+    padding: 10px 15px;
+    border-radius: 10px;
+    margin-top: 15px;
+    font-weight: 500;
+}
+body.light .success-message {
+    background: var(--success-bg-light);
+    color: var(--success-text-light);
+    border-color: var(--success-border-light);
+}
