@@ -37,11 +37,113 @@ function DashboardAppUI() {
     }
   }, [messages, currentChatId]);
 
-  const handleSendMessage = async (text, isJDSearch, kValue) => { /* ... existing code ... */ };
-  const handleDownloadResumes = async (files) => { /* ... existing code ... */ };
-  const handleNewChat = () => { /* ... existing code ... */ };
-  const handleChatSelect = (chatId) => { /* ... existing code ... */ };
-  const handleBulkUploadFiles = async (files) => { /* ... existing code ... */ };
+  const handleSendMessage = async (text, isJDSearch, kValue) => {
+    const newMessage = {
+      content: text,
+      sender: 'user',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    setMessages((prev) => [...prev, newMessage]);
+    setIsSending(true);
+
+    // Add typing indicator
+    const typingMessage = { content: '', sender: 'bot', time: '', isLoading: true };
+    setMessages((prev) => [...prev, typingMessage]);
+
+    try {
+      const data = await searchResumes(text, kValue, isJDSearch);
+      
+      setMessages((prev) => {
+        const updatedMessages = prev.filter(msg => !msg.isLoading); // Remove typing indicator
+        const botResponse = {
+          content: data.response || "I couldn't find a relevant answer.",
+          sender: 'bot',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          hasDownloadButton: data.selected_files && data.selected_files.length > 0,
+          filesToDownload: data.selected_files || [],
+        };
+        return [...updatedMessages, botResponse];
+      });
+    } catch (error) {
+      console.error('Search error:', error);
+      setMessages((prev) => {
+        const updatedMessages = prev.filter(msg => !msg.isLoading); // Remove typing indicator
+        const errorMessage = {
+          content: "Sorry, I'm having trouble connecting to the backend. Please check if the server is running.",
+          sender: 'bot',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+        return [...updatedMessages, errorMessage];
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleDownloadResumes = async (files) => {
+    try {
+      const blob = await downloadResumes(files);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'selected_resumes.zip';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      setMessages((prev) => [...prev, {
+        content: `Downloaded ${files.length} resume(s)!`,
+        sender: 'bot',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }]);
+    } catch (error) {
+      console.error('Download error:', error);
+      setMessages((prev) => [...prev, {
+        content: "Failed to download resumes. Please try again.",
+        sender: 'bot',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }]);
+    }
+  };
+
+  const handleNewChat = () => {
+    setMessages([]);
+    setCurrentChatId(Math.random().toString(36).substring(7)); // Generate a new ID
+    setChatSessions((prev) => [...prev, { id: currentChatId, name: `Chat ${prev.length + 1}` }]); // Add new session to history
+  };
+
+  const handleChatSelect = (chatId) => {
+    // In a real app, you'd load messages for this chatId from backend
+    setMessages([{ // Placeholder message for selected chat
+      content: `Loaded chat: ${chatId}. (Feature under development)`,
+      sender: 'bot',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    }]);
+    setCurrentChatId(chatId);
+  };
+
+  const handleBulkUploadFiles = async (files) => {
+    setMessages((prev) => [...prev, {
+      content: `Uploading ${files.length} resume(s) in bulk...`,
+      sender: 'bot',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    }]);
+    try {
+      const data = await apiUploadResumes(files);
+      setMessages((prev) => [...prev, {
+        content: data.message || data.error || 'Bulk upload complete.',
+        sender: 'bot',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }]);
+    } catch (error) {
+      console.error('Bulk upload error:', error);
+      setMessages((prev) => [...prev, {
+        content: "Failed to perform bulk upload. Network error or server issue.",
+        sender: 'bot',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }]);
+    }
+  };
 
   return (
     <div className={`flex h-screen overflow-hidden 
