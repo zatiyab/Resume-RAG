@@ -36,7 +36,7 @@ export const downloadResumes = async (files) => {
 };
 
 export const signupUser = async (userData) => {
-  const response = await fetch(`${API_BASE_URL}/api/v1/auth/signup`, {
+  const response = await fetch(`${API_BASE_URL}/signup`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -47,7 +47,7 @@ export const signupUser = async (userData) => {
 };
 
 export const loginUser = async (credentials) => {
-  const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+  const response = await fetch(`${API_BASE_URL}/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

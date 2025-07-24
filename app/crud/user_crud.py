@@ -1,10 +1,10 @@
-# backend/app/crud/user_crud.py (UPDATED for asyncio.to_thread)
+
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from app.models.users import User
 from app.schemas.user_schemas import UserCreate
 from uuid import UUID
-import asyncio # <--- YAHAN CHANGE HAI: Import asyncio
+import asyncio
 
 class CRUDUser:
     async def get_by_email(self, db: Session, email: str) -> User | None:

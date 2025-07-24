@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session # Import synchronous Session
 # from sqlalchemy.ext.asyncio import AsyncSession # No longer needed
 from app.core.database import create_all_tables_sync, get_db # Import sync get_db and table creation
 from app.core.config import settings
-from app.api.routes import auth_router
+
 
 
 import asyncio
@@ -17,20 +17,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.api.routes import router as api_router
 from fastapi.middleware.cors import CORSMiddleware
-
-
-app = FastAPI()
-
-
-
-# Allow your React frontend to talk to this backend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # <- React dev server default (Vite)
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 
 # FastAPI Lifespan Context Manager
@@ -55,7 +41,6 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
-
 # CORS Middleware
 app.add_middleware(
     CORSMiddleware,
@@ -65,10 +50,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # --- Root Endpoint (Test) ---
 @app.get("/")
 async def read_root():
     return {"message": "Hello, HireMind Backend (FastAPI) is running!"}
 
 # --- Register API Routers ---
-app.include_router(auth_router, prefix="/api/v1/auth", tags=["Auth"])
+app.include_router(api_router)
