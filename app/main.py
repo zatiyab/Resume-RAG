@@ -1,37 +1,52 @@
-# backend/app/main.py (UPDATED for Sync DB with FastAPI)
+# backend/app/main.py (UPDATED - Fix yield from in get_db_dependency)
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session # Import synchronous Session
-# from sqlalchemy.ext.asyncio import AsyncSession # No longer needed
-from app.core.database import create_all_tables_sync, get_db # Import sync get_db and table creation
+from app.core.database import create_all_tables_sync, get_db, get_engine, get_session_local # Get core DB components
 from app.core.config import settings
-from app.api.routes import auth_router
+from core.database import SessionLocal
+from typing import Generator # For synchronous dependency
 
 
-import asyncio
+from app.api.routes import auth_router 
+
+
+import asyncio # For asyncio.to_thread
+from fastapi.concurrency import run_in_threadpool #
+
 
 # FastAPI Lifespan Context Manager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("FastAPI application startup event: Initializing services and creating tables...")
-    global llm, embedding, qdrant_client
+    
+
+    # Initialize Engine and SessionLocal within lifespan and attach to app.state
+    app.state.engine = get_engine()
+    app.state.SessionLocal = get_session_local(app.state.engine)
+
     try:
-        await asyncio.to_thread(create_all_tables_sync) # <--- Use asyncio.to_thread
+        await asyncio.to_thread(create_all_tables_sync, app.state.engine)
         print("Database tables created/checked synchronously during startup.")
     except Exception as e:
         print(f"Error creating database tables at startup: {e}")
     
     yield
 
+    # Shutdown Event Logic
     print("FastAPI application shutdown event.")
+    if app.state.engine:
+        app.state.engine.dispose() # Dispose engine connections on shutdown
+        print("Database engine disposed.")
+
 
 # FastAPI App instance
 app = FastAPI(
     title="HireMind Backend API",
     description="RAG-based AI Resume Assistant Backend powered by FastAPI",
     version="1.0.0",
-    lifespan=lifespan,
+    lifespan=lifespan, # Attach the lifespan context manager
 )
 
 # CORS Middleware
@@ -42,6 +57,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+async def get_db_dependency(db_session_local: type[SessionLocal] = Depends(lambda: app.state.SessionLocal)) -> Generator[Session, None, None]:
+  
+    db = db_session_local() # Get a synchronous session
+    try:
+        yield db # Yield the synchronous session
+    finally:
+
+        await run_in_threadpool(db.close) 
+  
+
+
+app.dependency_overrides[get_db] = get_db_dependency
+
 
 # --- Root Endpoint (Test) ---
 @app.get("/")
