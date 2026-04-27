@@ -5,7 +5,7 @@ import { useTheme } from '../contexts/ThemeContext.jsx';
 import { signupUser } from '../services/api.js';
 
 
-const SignUpForm = ({setIsSignUp}) => {
+const SignUpForm = ({ setIsSignUp }) => {
   const { theme } = useTheme();
   const [formData, setFormData] = useState({
     name: '',
@@ -15,11 +15,11 @@ const SignUpForm = ({setIsSignUp}) => {
   });
 
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); 
+  const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState(''); // For displaying form errors
   const [formSuccess, setFormSuccess] = useState(''); // For displaying success messages
 
-  
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -33,14 +33,14 @@ const SignUpForm = ({setIsSignUp}) => {
     console.log('handleSublmit called');
     setFormError(''); // Clear previous errors
     setFormSuccess(''); // Clear previous success
-    setIsLoading(true); 
+    setIsLoading(true);
     if (formData.password.length < 8) {
-        setFormError('Password must be at least 8 characters long.');
-        console.log("password too short:", formData.password.length);
-        setIsLoading(false);
-        return;
+      setFormError('Password must be at least 8 characters long.');
+      console.log("password too short:", formData.password.length);
+      setIsLoading(false);
+      return;
     }
-    console.log('Attempting signup for:', formData.email); 
+    console.log('Attempting signup for:', formData.email);
 
     try {
       const data = await signupUser(formData);
@@ -48,27 +48,27 @@ const SignUpForm = ({setIsSignUp}) => {
       if (data.detail) { // FastAPI error detail
         setFormError(data.detail);
       } else if (data.email) { // Successful signup returns user data
-        print('Signup successful:', data)
+        console.log('Signup successful:', data);
         setFormSuccess('Account created successfully! You can now log in.');
         console.log('Signup successful, response:', data);
         setFormData({ name: '', email: '', password: '' }); // Clear form
         // Redirect to Sign In page
-        setIsSignUp(false); 
+        setIsSignUp(false);
         console.log('Redirecting to Sign In page.'); // Debugging
       } else {
-          setFormError('An unexpected error occurred during signup.');
-          console.log('Unexpected API response:', data);
+        setFormError('An unexpected error occurred during signup.');
+        console.log('Unexpected API response:', data);
       }
     } catch (error) {
       console.error('Signup API error:', error);
       setFormError('Network error or server unreachable. Please try again later.');
     } finally {
-        setIsLoading(false); 
+      setIsLoading(false);
     }
   };
   const inputClasses = `w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-hiremind-purple-accent transition-all duration-200 text-base border 
-    ${theme === 'dark' 
-      ? 'bg-hiremind-element-dark border-white/10 text-hiremind-text-dark-primary placeholder-hiremind-text-dark-secondary' 
+    ${theme === 'dark'
+      ? 'bg-hiremind-element-dark border-white/10 text-hiremind-text-dark-primary placeholder-hiremind-text-dark-secondary'
       : 'bg-hiremind-input-bg-light border-hiremind-input-border-light text-hiremind-text-light-primary placeholder-hiremind-text-light-secondary'}`;
 
   const iconClasses = `text-hiremind-purple-accent text-lg ${theme === 'dark' ? 'opacity-80' : 'opacity-100'}`;
@@ -87,7 +87,7 @@ const SignUpForm = ({setIsSignUp}) => {
       )}
       {/* Name Input */}
       <div className="relative">
-        <FiUser className={`absolute left-4 top-1/2 -translate-y-1/2 ${iconClasses}`}/>
+        <FiUser className={`absolute left-4 top-1/2 -translate-y-1/2 ${iconClasses}`} />
         <input
           type="text"
           name="name"
@@ -101,7 +101,7 @@ const SignUpForm = ({setIsSignUp}) => {
 
       {/* Email Input */}
       <div className="relative">
-        <FiMail className={`absolute left-4 top-1/2 -translate-y-1/2 ${iconClasses}`}/>
+        <FiMail className={`absolute left-4 top-1/2 -translate-y-1/2 ${iconClasses}`} />
         <input
           type="email"
           name="email"
@@ -123,13 +123,13 @@ const SignUpForm = ({setIsSignUp}) => {
           onChange={handleChange}
           placeholder="Password"
           className={`pl-12 pr-16 ${inputClasses}`} // Increased right padding for injected icon
- 
+
           required
         />
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
- 
+
           className="absolute right-4 top-1/2 -translate-y-1/2 text-hiremind-purple-accent text-lg opacity-80 hover:opacity-100 focus:outline-none z-10 
             px-2 py-1 rounded-full transition-colors 
             ${theme === 'dark' ? 'bg-hiremind-element-dark/80' : 'bg-hiremind-input-bg-light/80'}" // Added background and padding for button
@@ -144,9 +144,9 @@ const SignUpForm = ({setIsSignUp}) => {
         type="submit"
         className="w-full py-3 rounded-xl font-semibold shadow-lg transition-all duration-300 
           bg-hiremind-purple-accent hover:bg-hiremind-purple-accent/90 text-black focus:outline-none focus:ring-2 focus:ring-hiremind-purple-accent focus:ring-opacity-80"
-          disabled={isLoading} 
+        disabled={isLoading}
       >
-        {isLoading ? 'Creating Account...' : 'CREATE ACCOUNT'} 
+        {isLoading ? 'Creating Account...' : 'CREATE ACCOUNT'}
       </button>
     </form>
   );

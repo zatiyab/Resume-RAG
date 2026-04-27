@@ -1,37 +1,59 @@
 // frontend/HireMind/src/services/api.js
-const API_BASE_URL = 'http://localhost:8000'; // Flask backend URL
+const API_BASE_URL = 'http://localhost:5000';
 
 export const uploadResumes = async (files) => {
-  // const formData = new FormData();
-  // files.forEach(file => {
-  //   formData.append('files', file);
-  // });
-  // console.log(formData)
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append('files', file);
+  });
 
-  console.log(files);
-  
+  const userId = localStorage.getItem('user_id') || "be54d72a-4e8f-450b-99a7-8b9770b6a469";
+  const response = await fetch(`${API_BASE_URL}/upload_resumes?user_id=${userId}`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let errorBody = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      errorBody = { detail: 'Upload failed' };
+    }
+    throw new Error(errorBody?.detail?.message || errorBody?.detail || 'Upload failed');
+  }
+
+  return response.json();
 };
 
 export const searchResumes = async (query, k,isJDsearch) => {
-  console.log(JSON.stringify({ "user_id":"7a3d2e98-ef7f-4c80-a8b5-1457c9a7d3e0","user_query":query, "k":k}))
+  const userId = localStorage.getItem('user_id') || "be54d72a-4e8f-450b-99a7-8b9770b6a469";
+  console.log(JSON.stringify({ "user_id": userId, "user_query":query, "k":k}))
   const response = await fetch(`${API_BASE_URL}/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ "user_id":"7a3d2e98-ef7f-4c80-a8b5-1457c9a7d3e0","user_query":query, "k":k}),
+    body: JSON.stringify({ "user_id": userId,"user_query":query, "k":k}),
   });
   return response.json();
 };
 
 export const downloadResumes = async (files) => {
+  const userId = localStorage.getItem('user_id') || "be54d72a-4e8f-450b-99a7-8b9770b6a469";
   const response = await fetch(`${API_BASE_URL}/download_resumes`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ files }),
+    body: JSON.stringify({ files, user_id: userId }),
   });
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to download resumes');
+  }
+  
   return response.blob(); // Returns blob for file download
 };
 

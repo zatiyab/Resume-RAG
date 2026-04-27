@@ -1,31 +1,20 @@
-# backend/app/main.py (UPDATED for Sync DB with FastAPI)
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException, status
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session # Import synchronous Session
-# from sqlalchemy.ext.asyncio import AsyncSession # No longer needed
-from app.core.database import create_all_tables_sync, get_db # Import sync get_db and table creation
-from app.core.config import settings
-
-
-
 import asyncio
-from fastapi import FastAPI 
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import router as api_router
-from fastapi.middleware.cors import CORSMiddleware
+from app.core.config import settings
+from app.core.database import create_all_tables_sync
 
 
 # FastAPI Lifespan Context Manager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("FastAPI application startup event: Initializing services and creating tables...")
-    global llm, embedding, qdrant_client
     try:
-        await asyncio.to_thread(create_all_tables_sync) # <--- Use asyncio.to_thread
+        await asyncio.to_thread(create_all_tables_sync)
         print("Database tables created/checked synchronously during startup.")
     except Exception as e:
         print(f"Error creating database tables at startup: {e}")

@@ -1,13 +1,9 @@
 venv
-Backup
-resumes
-resumes_backup
+.venv
 __pycache__
-__pycache__ copy
-.idea
+
 .env
-# .gitignore
-# Python
+
 __pycache__/
 *.pyc
 *.pyo
@@ -18,7 +14,7 @@ venv/
 lib/
 # Debugging stuff
 *.log
-*.sqlite3
+
 *.db
 dist/
 build/
@@ -39,6 +35,4 @@ yarn-error.log*
 Thumbs.db       # Windows specific
 .vscode/        # VSCode settings (optional, if you want to keep them local)
 
-# Resumes (if directly in root or backend/)
-resumes/
-unique.json
+

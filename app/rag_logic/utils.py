@@ -2,6 +2,8 @@ import subprocess
 import os
 import unicodedata
 import re
+import tempfile
+import uuid
 
 # from pathlib import Path
 
@@ -18,6 +20,8 @@ import re
 #         print(f"Renamed: {file.name} → {new_name}")
 
 
+import shutil
+
 def convert_with_libreoffice(input_path):
     if not os.path.isfile(input_path):
         print(f"File not found: {input_path}")
@@ -29,14 +33,29 @@ def convert_with_libreoffice(input_path):
 
     output_dir = os.path.dirname(input_path)
 
-    subprocess.run([
-        "soffice",
-        "--headless",
-        "--convert-to", "pdf",
-        "--outdir", output_dir,
-        input_path
-    ])
-    print(f"Converted: {input_path}")
+    soffice_path = "soffice"
+    if os.name == 'nt':
+        if not shutil.which("soffice"):
+            common_paths = [
+                r"C:\Program Files\LibreOffice\program\soffice.exe",
+                r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"
+            ]
+            for p in common_paths:
+                if os.path.isfile(p):
+                    soffice_path = p
+                    break
+
+    try:
+        subprocess.run([
+            soffice_path,
+            "--headless",
+            "--convert-to", "pdf",
+            "--outdir", output_dir,
+            input_path
+        ], check=True)
+        print(f"Converted: {input_path}")
+    except Exception as e:
+        print(f"Error executing soffice: {e}")
 
 def convert_all_docs_in_folder(folder_path):
     for filename in os.listdir(folder_path):
@@ -80,3 +99,41 @@ def basic_text_normalization(text: str) -> str:
             normalized_words.append(word.lower())
     
     return ' '.join(normalized_words).strip()
+
+
+def convert_doc_content_to_pdf_bytes(content_bytes: bytes, original_filename: str) -> bytes:
+    """Takes DOC/DOCX bytes, saves temp files for LibreOffice, converts to PDF, returns PDF bytes, limits disk footprint."""
+    temp_dir = tempfile.gettempdir()
+    unique_id = uuid.uuid4().hex[:8]
+    
+    # Needs to match docx/doc extension for libreoffice to convert it properly
+    _, ext = os.path.splitext(original_filename)
+    if not ext:
+        ext = ".docx"
+
+    temp_input_name = f"temp_resume_{unique_id}{ext}"
+    temp_input_path = os.path.join(temp_dir, temp_input_name)
+    
+    with open(temp_input_path, "wb") as f:
+        f.write(content_bytes)
+        
+    try:
+        # Convert using existing method
+        convert_with_libreoffice(temp_input_path)
+        
+        pdf_path = os.path.splitext(temp_input_path)[0] + ".pdf"
+        
+        if not os.path.exists(pdf_path):
+            raise Exception("LibreOffice failed to generate PDF output.")
+            
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+            
+        # Clean up output PDF
+        os.remove(pdf_path)
+        
+        return pdf_bytes
+    finally:
+        # Clean up input DOC
+        if os.path.exists(temp_input_path):
+            os.remove(temp_input_path)

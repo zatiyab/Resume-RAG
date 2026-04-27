@@ -146,23 +146,27 @@ function DashboardAppUI() {
   };
 
   return (
-    <div className={`flex h-screen overflow-hidden 
-      ${theme === 'dark' ? 'bg-hiremind-bg-dark text-hiremind-text-dark-primary' : 'bg-hiremind-bg-light text-hiremind-text-light-primary'}`}>
+    <div className="flex h-screen overflow-hidden bg-transparent text-hiremind-text-light-primary dark:text-hiremind-text-dark-primary transition-colors duration-300">
       <Sidebar
         onNewChat={handleNewChat}
         onChatSelect={handleChatSelect}
         chatSessions={chatSessions}
         onBulkUploadFiles={handleBulkUploadFiles}
       />
-      <div className="flex flex-col flex-1">
-        <header className={`p-4 text-center text-3xl font-extrabold tracking-wide shadow-xl border-b font-heading
-          ${theme === 'dark' 
-            ? 'bg-hiremind-element-dark text-hiremind-text-dark-primary border-white/10 shadow-hiremind-darkblue/40' 
-            : 'bg-hiremind-element-light text-hiremind-text-light-primary border-black/10 shadow-hiremind-darkblue/10'}`}>
-          HireMind: AI Resume Assistant
+      <div className="flex flex-col flex-1 relative">
+        <header className="p-5 text-center shadow-sm z-10 backdrop-blur-3xl bg-white/40 dark:bg-black/20 border-b border-black/5 dark:border-white/5 transition-colors duration-300">
+          <h1 className="text-3xl font-extrabold tracking-tight font-heading bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300 text-transparent bg-clip-text drop-shadow-sm">
+            HireMind AI Assistant
+          </h1>
         </header>
         <ChatWindow messages={messages} onDownloadResumes={handleDownloadResumes} />
-        <MessageInput onSendMessage={handleSendMessage} onUploadFiles={handleBulkUploadFiles} isSending={isSending} />
+        
+        {/* Floating Input Container wrapper */}
+        <div className="absolute bottom-6 left-0 right-0 px-4 md:px-12 z-20 pointer-events-none">
+            <div className="pointer-events-auto">
+                <MessageInput onSendMessage={handleSendMessage} onUploadFiles={handleBulkUploadFiles} isSending={isSending} />
+            </div>
+        </div>
       </div>
     </div>
   );

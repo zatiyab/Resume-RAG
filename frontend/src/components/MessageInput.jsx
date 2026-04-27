@@ -49,29 +49,17 @@ const MessageInput = ({ onSendMessage, onUploadFiles, isSending }) => {
     }
   };
 
-  const inputBgColor = theme === 'dark' ? 'bg-hiremind-element-dark' : 'bg-hiremind-element-light';
-  const inputTextColor = theme === 'dark' ? 'text-hiremind-text-dark-primary' : 'text-hiremind-text-light-primary';
-  const inputBorderColor = theme === 'dark' ? 'border-white/10' : 'border-black/10';
-  const placeholderColor = theme === 'dark' ? 'placeholder-hiremind-text-dark-secondary' : 'placeholder-hiremind-text-light-secondary';
-  
   return (
-    <div className={`p-4 border-t shadow-lg backdrop-blur-md 
-      ${theme === 'dark' 
-        ? 'bg-hiremind-element-dark/50 border-white/10 shadow-hiremind-darkblue/30' 
-        : 'bg-hiremind-element-light/50 border-black/10 shadow-hiremind-darkblue/10'}`}>
-      <div className="relative flex items-end gap-3 max-w-3xl mx-auto">
+    <div className="p-3 md:p-4 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-2xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/50 dark:border-slate-700/50 transition-all duration-300">
+      <div className="relative flex items-end gap-3 max-w-4xl mx-auto">
         {/* Attachment button */}
         <button
           onClick={handleFileUploadClick}
-          className={`p-3 rounded-full shadow-md transition-colors 
-            backdrop-blur-sm border 
-            ${theme === 'dark' 
-              ? 'bg-hiremind-darkblue/60 text-hiremind-text-dark-primary hover:bg-hiremind-darkblue/80 border-hiremind-darkblue/70' 
-              : 'bg-hiremind-beige/60 text-hiremind-darkblue hover:bg-hiremind-beige/80 border-hiremind-beige/70'}`}
+          className="p-3 rounded-full flex-shrink-0 transition-all duration-300 bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-transparent dark:border-white/5 active:scale-95"
           disabled={isSending}
           title="Upload JD or Resumes"
         >
-          <FiPlus size={20} />
+          <FiPlus size={22} />
           <input
             type="file"
             multiple
@@ -98,27 +86,21 @@ const MessageInput = ({ onSendMessage, onUploadFiles, isSending }) => {
           onKeyDown={handleKeyDown}
           placeholder="Ask a question or paste Job Description..."
           rows="1"
-          className={`flex-1 p-3 pl-5 rounded-3xl resize-none outline-none focus:ring-2 focus:ring-hiremind-accent-purple/50 transition-colors custom-scrollbar
-            backdrop-blur-sm border border max-h-24 overflow-y-auto
-            ${inputBgColor} ${inputTextColor} ${inputBorderColor} ${placeholderColor}`}
+          className="flex-1 p-3.5 px-5 rounded-3xl resize-none outline-none transition-all duration-300 custom-scrollbar max-h-32 overflow-y-auto bg-white/50 focus:bg-white dark:bg-slate-950/50 dark:focus:bg-slate-900 focus:ring-2 focus:ring-emerald-500/50 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 border border-slate-200/50 dark:border-white/5 shadow-inner"
           disabled={isSending}
         />
         
         {/* K-value slider and display */}
-        <div className={`flex items-center rounded-xl p-2 px-3 text-sm flex-shrink-0 w-24 sm:w-32 md:w-40 
-          backdrop-blur-sm border 
-          ${theme === 'dark' 
-            ? 'bg-hiremind-element-dark/60 text-hiremind-text-dark-secondary border-white/10' 
-            : 'bg-hiremind-element-light/60 text-hiremind-text-light-secondary border-black/10'}`}>
-            <FaSlidersH className="mr-2 flex-shrink-0" />
-            <span className="flex-shrink-0">K: {kValue}</span>
+        <div className="flex items-center rounded-2xl p-2 px-4 flex-shrink-0 w-28 sm:w-36 md:w-44 transition-colors duration-300 bg-slate-100/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border border-slate-200/50 dark:border-white/5">
+            <FaSlidersH className="mr-2 flex-shrink-0 opacity-70" />
+            <span className="flex-shrink-0 text-sm font-medium">K: {kValue}</span>
             <input
                 type="range"
                 min="1"
                 max="100"
                 value={kValue}
                 onChange={(e) => setKValue(parseInt(e.target.value))}
-                className="ml-2 w-full h-1 rounded-lg cursor-pointer accent-hiremind-accent-purple flex-grow"
+                className="ml-2 w-full h-1.5 rounded-lg cursor-pointer accent-emerald-500 bg-slate-200 dark:bg-slate-700"
                 disabled={isSending}
             />
         </div>
@@ -126,19 +108,17 @@ const MessageInput = ({ onSendMessage, onUploadFiles, isSending }) => {
         {/* Send Button */}
         <button
           onClick={handleSend}
-          className="p-3 rounded-full shadow-md hover:bg-hiremind-accent-purple/80 transition-colors
-            backdrop-blur-sm border 
-            ${theme === 'dark' 
-              ? 'bg-hiremind-accent-purple/60 text-black border-hiremind-accent-purple/70' 
-              : 'bg-hiremind-accent-purple/30 text-hiremind-darkblue border-hiremind-accent-purple/40'}"
+          className={`p-3.5 rounded-full shadow-lg transition-all duration-300 flex-shrink-0 border 
+            ${(query.trim() || jdText.trim()) && !isSending 
+              ? 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white border-transparent hover:shadow-emerald-500/30 hover:-translate-y-0.5 active:scale-95 cursor-pointer' 
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-transparent cursor-not-allowed'}`}
           disabled={isSending || (!query.trim() && !jdText.trim())}
         >
-          <FiSend size={20} />
+          <FiSend size={20} className={(query.trim() || jdText.trim()) && !isSending ? 'drop-shadow-sm' : ''} />
         </button>
       </div>
-       <div className={`text-center text-sm mt-2 
-        ${theme === 'dark' ? 'text-hiremind-text-dark-secondary' : 'text-hiremind-text-light-secondary'}`}>
-            Tip: For JD search, paste the JD. For general queries, type directly. Use the K-slider for number of results.
+       <div className="text-center text-xs mt-3 font-medium text-slate-400 dark:text-slate-500 tracking-wide">
+            Tip: For JD search, simply paste the JD. Use the K-slider to control the number of matching resumes retrieved.
         </div>
     </div>
   );

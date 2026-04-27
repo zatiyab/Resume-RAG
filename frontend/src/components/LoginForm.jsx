@@ -35,6 +35,9 @@ const LoginForm = ({ onLoginSuccess}) => {
         setFormError(data.detail);
       } else if (data.access_token) { 
         localStorage.setItem('access_token', data.access_token);
+        if (data.user_id) {
+            localStorage.setItem('user_id', data.user_id);
+        }
         // alert('Login successful! Redirecting...'); // For now, just an alert
         onLoginSuccess(); // Call callback to inform AuthPage
         navigate('/'); // Redirect to main app dashboard

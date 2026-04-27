@@ -1,6 +1,7 @@
 // frontend/tailwind.config.js (Colors Section CORRECTED)
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,jsx,ts,tsx}",
@@ -10,36 +11,34 @@ module.exports = {
       colors: {
         hiremind: {
           // Core Palette
-          'darkblue': '#1A2B3C',    // Deep Blue (Main dark background, text in light mode)
-          'beige': '#F5F0E1',       // Creamy Beige (Main light background, text in dark mode)
+          'darkblue': '#0A1118',    // Deep Blue-Black for dark backgrounds
+          'emerald-primary': '#10B981', // Solid Emerald
+          'teal-primary': '#14B8A6',    // Solid Teal
           
           // Dark Mode Specific UI elements
-          'bg-dark': '#12202E',     // Even darker background for main content area
-          'sidebar-dark': '#0B151F',// Very dark for sidebar
-          'element-dark': '#23384D',// Darker elements (cards, input fields)
-          // --- YAHAN CORRECTION HAI ---
-          'text-dark-primary': '#F5F0E1', // PRIMARY TEXT IN DARK MODE should be BEIGE
-          'text-dark-secondary': '#B0AFAF',// SECONDARY TEXT IN DARK MODE should be LIGHT GREY
-          // --- CORRECTION ENDS ---
+          'bg-dark': '#060B11',     // Ultra deep background
+          'sidebar-dark': '#0A1118',// Clean dark sidebar
+          'element-dark': '#111827',// Dark elements (cards, input fields)
+          'text-dark-primary': '#F8FAFC', // White-ish text
+          'text-dark-secondary': '#94A3B8', // Grey-ish text
 
           // Light Mode Specific UI elements
-          'bg-light': '#FDFBF6',    // Very light background for main content area
-          'sidebar-light': '#FFFFFF',// Pure white for sidebar
-          'element-light': '#E9E5DE',// Lighter beige for elements
-          'text-light-primary': '#1A2B3C', // PRIMARY TEXT IN LIGHT MODE should be DARKBLUE
-          'text-light-secondary': '#5A6B7C',// SECONDARY TEXT IN LIGHT MODE should be DARKER GREY
+          'bg-light': '#F8FAFC',    // Cool, ultra-light slate
+          'sidebar-light': '#FFFFFF',// Pure white 
+          'element-light': '#F1F5F9',// Clean slate for light elements
+          'text-light-primary': '#0F172A', // Very dark slate for primary text
+          'text-light-secondary': '#64748B',// Soft text
 
-          // Accents (for buttons, links, etc.)
-          'accent-purple': '#8E6CEF', // Soft Purple
-          'accent-green': '#4CAF50',  // Standard Green
-          'accent-blue': '#3498DB',   // Standard Blue
-
-          // New Colors for Auth Page Design
-          'purple-primary': '#6B21A8', // Deep Purple (for background)
-          'purple-accent': '#8B5CF6', // Lighter Purple (for buttons, icons)
-          'light-bg-card': '#F9FAFB', // Very light off-white for the auth card background
-          'input-bg-light': '#F3F4F6', // Light gray for input field background
-          'input-border-light': '#D1D5DB', // Light gray for input field border
+          // Accents 
+          'accent-teal': '#14B8A6',
+          'accent-emerald': '#10B981',
+          
+          // Legacy Auth mapping to prevent breaks temporarily
+          'purple-primary': '#060B11', 
+          'purple-accent': '#10B981', 
+          'light-bg-card': '#FFFFFF',
+          'input-bg-light': '#F8FAFC', 
+          'input-border-light': '#E2E8F0', 
         },
       },
       fontFamily: {

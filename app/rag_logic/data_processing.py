@@ -5,24 +5,49 @@ import time
 import os
 import pdfplumber
 import json
-from langchain_huggingface import HuggingFaceEmbeddings # Not used, can remove
+import cohere
+from typing import Any
 from qdrant_client.http.models import PointStruct
 from langchain_cohere import ChatCohere
 from qdrant_client import QdrantClient
-from sentence_transformers import SentenceTransformer
 from convert_to_pdf import convert_all_docs_in_folder
+from app.core.config import settings
 
-# print("This is the Cohere key in data processing:", os.getenv('COHERE_API_KEY'))
-# llm = ChatCohere(model="command-r-plus",timeout_seconds=60,cohere_api_key=os.getenv('COHERE_API_KEY'))
-llm = ChatCohere(model="command-r-plus",timeout_seconds=60,cohere_api_key="BCxkxzdkBAiA9Ey0mS7csgHSRxaV2YHcYu6mtTrg")
-print(os.getenv('COHERE_API_KEY'))
+llm = ChatCohere(model="command-r-plus-08-2024",timeout_seconds=60,cohere_api_key=settings.COHERE_API_KEY)
 
-embedding = SentenceTransformer("BAAI/bge-large-en-v1.5")
+
+co = cohere.ClientV2()
+
+
+def _embed_text(text: str) -> list[float]:
+    """Match embedding logic with app/services/qdrant_client.py."""
+    response = co.embed(
+        inputs=[{"content": [{"type": "text", "text": text}]}],
+        model="embed-v4.0",
+        input_type="classification",
+        embedding_types=["float"],
+    )
+
+    embeddings_obj: Any = getattr(response, "embeddings", None)
+    if embeddings_obj is not None:
+        for attr in ("float", "float_", "floats"):
+            value = getattr(embeddings_obj, attr, None)
+            if value:
+                return value[0]
+        if isinstance(embeddings_obj, list) and embeddings_obj:
+            return embeddings_obj[0]
+
+    if isinstance(response, dict):
+        maybe_embeddings = response.get("embeddings")
+        if isinstance(maybe_embeddings, list) and maybe_embeddings:
+            return maybe_embeddings[0]
+
+    raise ValueError("Could not extract float embedding from Cohere response")
+
 client = QdrantClient(
-    url="http://localhost:6333",
-    timeout=60.0
+    url=settings.QDRANT_URL,
+    api_key=settings.QDRANT_API_KEY,
 )
-
 
 
 def remove_same_files(folder):
@@ -188,8 +213,7 @@ def add_vectors():
         last_indx+=1
         resume_data= basic_text_normalization(resume_data)
         metadata_dict = llm_create_metadata(resume_data.lower(),resume_name=resume)
-        vector = embedding.encode(resume_data)
-        vector_str = json.dumps(vector.tolist())
+        vector = _embed_text(resume_data.lower())
     
         list_fields =[
   "skills_languages",

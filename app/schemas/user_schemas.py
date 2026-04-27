@@ -25,5 +25,4 @@ class UserInDB(UserBase):
     updated_at: datetime
 
     class Config:
-        orm_mode = True # For SQLAlchemy ORM compatibility
         from_attributes = True # Pydantic v2 equivalent of orm_mode

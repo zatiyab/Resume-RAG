@@ -1,109 +1,61 @@
 
-# Resume RAG Documentation
+# Resume RAG
 
-## Modules Used
+This project now runs as a strict two-tier app:
 
-- `zipfile`: For creating a ZIP file of retrieved documents to send to the frontend.
-- `io.BytesIO`: In-memory byte buffer that holds the ZIP file.
-- `qdrant_client`: Used to initialize and interact with Qdrant vector DB — for adding, deleting, and querying vectors.
-- `os`: To read and iterate over files in the `resumes/` folder.
-- `langchain_cohere.ChatCohere`: LLM wrapper for Cohere Command R+ — used for generating vector payloads and answering queries.
-- `dotenv.load_dotenv`: Loads API keys from a `.env` file into the environment.
-- `data_processing`: Contains functions like `add_vectors`, `delete_collection`, `basic_text_normalization`, and `all_dict`.
-- `metadata_filter`: Includes `generate_filter()` to create metadata filters.
-- `json`: Reads and writes to a `unique.json` file that tracks unique payload values per key.
-- `langchain`: Used for prompt templating and creating the main RAG chain using `Runnable` components.
-- `streamlit`: Builds the frontend UI for interacting with the RAG system.
-- `sentence_transformers.SentenceTransformer`: Generates embeddings for both resumes and chat history.
+- FastAPI backend
+- React (Vite) frontend
 
----
+## Setup
 
-## Why These Modules?
+1. Create and activate a Python virtual environment.
+2. Install backend dependencies.
+3. Start Qdrant.
+4. Run backend and frontend separately.
 
-- **Cohere Command R+**: Offers a large context window, generous free tier, and performs very well for RAG tasks.
-- **Google Gemini 2.0 Flash Lite**: Fast and accurate for filter generation.
-- **Qdrant Vector DB**: Uses HNSW indexing (faster than brute-force methods like FAISS’s `IndexFlatV2` or ChromaDB). Also supports self-hosting and cloud deployment.
+## Backend
 
----
+Install dependencies:
 
-## Resume RAG Setup Guide
-
-### 1. Add Resumes
-
-Place all resume files into the `resumes/` folder.
-
-```
-project_root/
-└── resumes/
-    ├── resume1.pdf
-    ├── resume2.docx
-    └── ...
+```bash
+pip install -r requirements.txt
 ```
 
----
+Run API server:
 
-### 2. Create `qdrant_data` Folder
-
-Run:
-
+```bash
+python server.py
 ```
+
+The backend starts on `http://localhost:5000`.
+
+## Frontend
+
+From the `frontend` folder:
+
+```bash
+npm install
+npm run dev
+```
+
+The frontend dev server starts on Vite's default local URL.
+
+## Qdrant
+
+Create local data folder:
+
+```bash
 mkdir qdrant_data
 ```
 
-This folder will store your Qdrant vector database files.
+Start Qdrant with Docker:
 
----
-
-### 3. Install Docker & Run Qdrant
-
-Make sure Docker is installed, then run:
-
-```
-docker run -d \
-  -p 6333:6333 \
-  -v $(pwd)/qdrant_data:/qdrant/storage \
-  qdrant/qdrant
+```bash
+docker run -d -p 6333:6333 -v $(pwd)/qdrant_data:/qdrant/storage qdrant/qdrant
 ```
 
-This will:
-- Run Qdrant in the background
-- Expose the dashboard at `localhost:6333`
-- Persist data in `qdrant_data`
+Dashboard:
 
----
-
-### 4. Install Python Dependencies
-
-```
-pip install -r requirements.txt
-```
-
----
-
-### 5. Access Qdrant Dashboard
-
-Open in your browser:
-
-```
+```text
 http://localhost:6333/dashboard
 ```
-
----
-
-### 6. Start the App
-
-Run the main file using:
-
-```
-streamlit run main.py
-```
-
-
-<!-- Command to delete things from qdrant folder -->
-sudo rm -rf /home/anubhav/svn_workspace/Resume_RAG/qdrant_data/*
-
-<!-- Command to run project from scratch --!>
-python -m venv venv
-source ./venv/bin/activate => windows ./venv/scripts/activate
-pip install -r requirements.txt
-streamlit run frontend.py

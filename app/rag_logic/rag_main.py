@@ -6,11 +6,12 @@ from app.services.qdrant_client import (client,
 from app.crud.db_crud import get_last_history
 import zipfile
 from io import BytesIO
-from langchain.schema.runnable import RunnableMap
-from langchain.prompts import PromptTemplate
+from langchain_core.runnables import RunnableMap
+from langchain_core.prompts import PromptTemplate
 from app.core.config import llm
-# --- MAIN STREAMLIT APPLICATION LOGIC ---
+
 def main(k, user_query,hist_id,user_id,db):
+    initialize_app_data(user_id)
     print('\n\n\n')
     print('-'*100)
     print("--- MAIN FUNCTION STARTED ---")
@@ -21,18 +22,18 @@ def main(k, user_query,hist_id,user_id,db):
 
     # --- History Retrieval for LLM (for "Conversation History" in prompt) ---
     print('--- DEBUG: Retrieving Chat History ---')
-    history_all_points, _ = client.scroll(
-        collection_name="history",
-        limit=1000, # Adjust limit as needed
-        with_payload=True
-    )
+    # history_all_points, _ = client.scroll(
+    #     collection_name="history",
+    #     limit=1000, # Adjust limit as needed
+    #     with_payload=True
+    # )
     
-    sorted_history_points = sorted(history_all_points, key=lambda p: int(p.id), reverse=True)
-    # Get last 2 history points (or more if desired for context)
-    actual_last_history_items = sorted_history_points[:2] 
-    selected_files = []
-    # final_history_for_llm_prompt = "\n".join([p.payload['history'] for p in actual_last_history_items if 'history' in p.payload])
-    final_history_for_llm_prompt =get_last_history(user_id,db)[0]
+    # sorted_history_points = sorted(history_all_points, key=lambda p: int(p.id), reverse=True)
+    # # Get last 2 history points (or more if desired for context)
+    # actual_last_history_items = sorted_history_points[:2] 
+    # selected_files = []
+    # # final_history_for_llm_prompt = "\n".join([p.payload['history'] for p in actual_last_history_items if 'history' in p.payload])
+    
     try:
         final_history_for_llm_prompt = get_last_history(user_id,db)[0]
     except:
@@ -62,7 +63,7 @@ def main(k, user_query,hist_id,user_id,db):
     else:
         # --- Step 2: Retrieve Relevant Resumes (for "Candidate Context" in prompt) ---
         print(f"--- DEBUG: Calling get_relevant_docs with processed query: '{user_query}' ---")
-        retrieved_resume_context,selected_files = get_relevant_docs(user_query=user_query, collection='resumes', k=k)
+        retrieved_resume_context,selected_files = get_relevant_docs(user_query=user_query,user_id=user_id, collection='resumes', k=k)
         print(f"--- DEBUG: Retrieved Resume Context Length: {len(retrieved_resume_context)} ---")
         history_resume_context = retrieved_resume_context
 
@@ -156,24 +157,9 @@ If fewer candidates match than requested, provide only the exact number found. I
     #     st.text_area("Answer", value=result.content, height=500)
     
     # --- Resume Download Logic ---
-    zip_buffer = None 
     
     if selected_files != []:
         print(f"--- DEBUG: Files selected for download: {selected_files} ---")
-        import os
-
-        folder_path = os.path.join(os.getcwd(), "resumes")
- # Verify this path is correct
-
-        zip_buffer = BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            for filename in selected_files:
-                file_path = os.path.join(folder_path, filename)
-                if os.path.exists(file_path):
-                    zip_file.write(file_path, arcname=filename)
-                else:
-                    print(f"--- WARNING: File not found for ZIP: {file_path} ---")
-        zip_buffer.seek(0)
     else:
         print("--- DEBUG: No files retrieved for download or session state empty. ---")
    
@@ -182,11 +168,13 @@ If fewer candidates match than requested, provide only the exact number found. I
         history_entry = f"""User: {original_user_input}
 Assistant: {result.content}
 History Document Context: {history_resume_context}"""
-        add_history(history_entry,hist_id)
+        add_history(history_entry,hist_id,user_id)
         print("--- DEBUG: History entry added. ---")
     else:
         print("--- DEBUG: No meaningful result to add to history. ---")
     last_context = history_resume_context
     print("Last Context")
     
-    return result.content, history_entry, zip_buffer ,selected_files
+    return {"result":result.content, 
+    "history":history_entry,
+    "selected_files": selected_files}
