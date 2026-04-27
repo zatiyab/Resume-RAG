@@ -6,8 +6,8 @@ from app.services.qdrant_client import (client,
 from app.crud.db_crud import get_last_history
 import zipfile
 from io import BytesIO
-from langchain.schema.runnable import RunnableMap
-from langchain.prompts import PromptTemplate
+from langchain_core.runnables import RunnableMap
+from langchain_core.prompts import PromptTemplate
 from app.core.config import llm
 # --- MAIN STREAMLIT APPLICATION LOGIC ---
 def main(k, user_query,hist_id,user_id,db):

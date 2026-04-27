@@ -33,7 +33,7 @@ const Sidebar = ({ onNewChat, onChatSelect, chatSessions, onBulkUploadFiles }) =
       }
     } catch (error) {
       console.error('Bulk upload error:', error);
-      setUploadStatus('Network error during upload.');
+      setUploadStatus(error.message || 'Network error during upload.');
     } finally {
       setUploadLoading(false);
       e.target.value = ''; // Clear input
