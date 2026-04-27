@@ -32,10 +32,11 @@ def main(k, user_query,hist_id,user_id,db):
     actual_last_history_items = sorted_history_points[:2] 
     selected_files = []
     # final_history_for_llm_prompt = "\n".join([p.payload['history'] for p in actual_last_history_items if 'history' in p.payload])
-    final_history_for_llm_prompt =get_last_history(user_id,db)[0]
-    try:
-        final_history_for_llm_prompt = get_last_history(user_id,db)[0]
-    except:
+    history_result = get_last_history(user_id, db)
+
+    if history_result and len(history_result) > 0:
+        final_history_for_llm_prompt = history_result[0]
+    else:
         final_history_for_llm_prompt = ""
     print(f"--- DEBUG: Prepared History Context Length: {len(final_history_for_llm_prompt)} ---")
 
