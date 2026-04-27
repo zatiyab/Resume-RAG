@@ -10,7 +10,8 @@ class UserBase(BaseModel):
 
 # Properties to receive via API on creation (signup)
 class UserCreate(UserBase):
-    password: str = Field(min_length=8)
+    # bcrypt only supports up to 72 bytes for password hashing
+    password: str = Field(min_length=8, max_length=72)
 
 # Properties to receive via API on login
 class UserLogin(BaseModel):

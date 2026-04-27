@@ -6,8 +6,8 @@ from app.services.qdrant_client import (client,
 from app.crud.db_crud import get_last_history
 import zipfile
 from io import BytesIO
-from langchain.schema.runnable import RunnableMap
-from langchain.prompts import PromptTemplate
+from langchain_core.runnables import RunnableMap
+from langchain_core.prompts import PromptTemplate
 from app.core.config import llm
 # --- MAIN STREAMLIT APPLICATION LOGIC ---
 def main(k, user_query,hist_id,user_id,db):
@@ -32,10 +32,11 @@ def main(k, user_query,hist_id,user_id,db):
     actual_last_history_items = sorted_history_points[:2] 
     selected_files = []
     # final_history_for_llm_prompt = "\n".join([p.payload['history'] for p in actual_last_history_items if 'history' in p.payload])
-    final_history_for_llm_prompt =get_last_history(user_id,db)[0]
-    try:
-        final_history_for_llm_prompt = get_last_history(user_id,db)[0]
-    except:
+    history_result = get_last_history(user_id, db)
+
+    if history_result and len(history_result) > 0:
+        final_history_for_llm_prompt = history_result[0]
+    else:
         final_history_for_llm_prompt = ""
     print(f"--- DEBUG: Prepared History Context Length: {len(final_history_for_llm_prompt)} ---")
 

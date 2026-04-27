@@ -5,7 +5,6 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct
 from sentence_transformers import SentenceTransformer
 from app.core.config import llm
-import pdfplumber
 import json
 import unicodedata
 import time
@@ -95,6 +94,7 @@ def llm_create_metadata(resume:str,resume_name):
 
 
 def add_vectors():
+    import pdfplumber
     '''
     Reads all the resumes in the resumes folder extracts text and calls function to generate metadata 
     then converts the resume into a vector and save it into the resume collection along with their respective metadatas.

@@ -1,26 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session 
-from app.core.database import get_db
-from app.models.users import User
+from sqlalchemy.orm import Session
 from app.schemas.user_schemas import UserCreate, UserLogin, UserInDB
 from app.crud.user_crud import user_crud
 from app.services.auth_service import AuthService
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 from asyncpg.exceptions import DuplicatePreparedStatementError
-from fastapi import APIRouter, Request, Depends
-from sqlalchemy.orm import Session
-from app.schemas.req_models import ChatPost, ChatResponse
-from app.services.chat import (post_chat_messages,
-                               upload_all_resumes,
-                               get_resumes_zip)
+from app.schemas.req_models import ChatPost
 from app.core.database import SessionLocal
-
-
-from fastapi import APIRouter, Request, Depends
-from sqlalchemy.orm import Session
-from app.schemas.req_models import ChatPost, ChatResponse
-from app.services.chat import post_chat_messages
-from app.core.database import SessionLocal
+from fastapi import UploadFile, File
 
 
 def get_db():
@@ -36,7 +23,13 @@ router = APIRouter()
 @router.post("/")
 async def post_chat(request:ChatPost,db:Session = Depends(get_db)):
     print(request)
+    from app.services.chat import post_chat_messages
     return await post_chat_messages(request,db)
+
+@router.post("/upload_resumes")
+async def upload_resumes(files: list[UploadFile] = File(...)):
+    from app.services.chat import upload_all_resumes
+    return await upload_all_resumes(files)
 
 def get_auth_service(db: Session = Depends(get_db)) -> AuthService: # <--- Change type hint to Session
     return AuthService(db)
@@ -60,7 +53,13 @@ async def signup_user(user_in: UserCreate, db: Session = Depends(get_db)): # <--
                 detail="Email already registered"
             )
         
-        hashed_password = AuthService.get_password_hash(user_in.password)
+        try:
+            hashed_password = AuthService.get_password_hash(user_in.password)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password must be 8-72 characters."
+            )
         # user_crud.create is now async
         user = await user_crud.create(db, user_in=user_in, hashed_password=hashed_password)
         return user

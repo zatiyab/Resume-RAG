@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from langchain_cohere import ChatCohere
 
 load_dotenv() # Load environment variables from .env
-llm = ChatCohere(model="command-r-plus", timeout_seconds=60, cohere_api_key='BCxkxzdkBAiA9Ey0mS7csgHSRxaV2YHcYu6mtTrg')
+llm = ChatCohere(model="command-a-03-2025", timeout_seconds=60, cohere_api_key='BCxkxzdkBAiA9Ey0mS7csgHSRxaV2YHcYu6mtTrg')
 class Settings:
     # Database URL for PostgreSQL (from previous step)
     DATABASE_URL:str = os.getenv("DB_URL")

@@ -2,14 +2,21 @@
 const API_BASE_URL = 'http://localhost:8000'; // Flask backend URL
 
 export const uploadResumes = async (files) => {
-  // const formData = new FormData();
-  // files.forEach(file => {
-  //   formData.append('files', file);
-  // });
-  // console.log(formData)
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append('files', file);
+  });
 
-  console.log(files);
-  
+  const response = await fetch(`${API_BASE_URL}/upload_resumes`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.detail || data.error || 'Upload failed.');
+  }
+  return data;
 };
 
 export const searchResumes = async (query, k,isJDsearch) => {
