@@ -17,10 +17,10 @@ const ChatWindow = ({ messages, onDownloadResumes }) => {
   }, [messages]);
 
   return (
-    <div className={`flex-1 p-5 overflow-y-auto custom-scrollbar rounded-b-xl backdrop-blur-sm shadow-inner 
+    <div className={`flex-1 p-5 overflow-y-auto custom-scrollbar rounded-none backdrop-blur-sm shadow-inner 
       ${theme === 'dark' 
-        ? 'bg-hiremind-bg-dark/80 border border-hiremind-darkblue/80' /* Slightly transparent darkblue background */ 
-        : 'bg-hiremind-bg-light/80 border border-hiremind-beige/80'}`}> {/* Slightly transparent beige background */}
+        ? 'bg-hiremind-bg-dark/80 border border-slate-700/80' 
+        : 'bg-hiremind-bg-light/80 border border-slate-300/80'}`}>
       {messages.length === 0 ? (
         <div className={`text-center p-10 
           ${theme === 'dark' ? 'text-hiremind-text-dark-secondary' : 'text-hiremind-text-light-secondary'}`}>

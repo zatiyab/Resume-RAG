@@ -192,26 +192,30 @@ body.light .header h1 {
 }
 
 /* Scrollbar */
+/* Make scrollbars thinner and reserve gutter so they appear inside elements */
+.custom-scrollbar {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-gutter: stable; /* Reserve space for scrollbar inside the element */
+}
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: var(--hiremind-element-dark); /* Using direct hiremind color */
-  border-radius: 4px;
+  background: var(--scrollbar-track-dark, var(--hiremind-element-dark));
+  border-radius: 999px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(
-    --hiremind-text-light-secondary
-  ); /* Using direct hiremind color */
-  border-radius: 4px;
+  background: var(--scrollbar-thumb-dark, var(--hiremind-text-light-secondary));
+  border-radius: 999px;
+  border: 2px solid transparent; /* creates inner padding so thumb looks inset */
+  background-clip: padding-box;
 }
 body.light .custom-scrollbar::-webkit-scrollbar-track {
-  background: var(--hiremind-element-light); /* Using direct hiremind color */
+  background: var(--scrollbar-track-light, var(--hiremind-element-light));
 }
 body.light .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(
-    --hiremind-text-dark-secondary
-  ); /* Using direct hiremind color */
+  background: var(--scrollbar-thumb-light, var(--hiremind-text-dark-secondary));
 }
 
 /* File selector button - previously @apply, now hardcoded values/vars */

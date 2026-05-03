@@ -1,7 +1,6 @@
 // frontend/src/components/MessageInput.jsx (updated)
-import React, { useState, useRef, useEffect } from 'react';
-import { FiPlus, FiSend } from 'react-icons/fi';
-import { IoDocumentTextOutline, IoSearchOutline } from 'react-icons/io5'; // Not used in this component, but if needed elsewhere
+import React, { useState } from 'react';
+import { FiSend } from 'react-icons/fi';
 import { FaSlidersH } from 'react-icons/fa';
 import { useTheme } from '../contexts/ThemeContext.jsx'; // Make sure .jsx extension is here
 
@@ -10,15 +9,6 @@ const MessageInput = ({ onSendMessage, onUploadFiles, isSending }) => {
   const [query, setQuery] = useState('');
   const [jdText, setJdText] = useState('');
   const [kValue, setKValue] = useState(5);
-  const fileInputRef = useRef(null);
-  const textareaRef = useRef(null);
-
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
-    }
-  }, [query, jdText]);
 
   const handleSend = () => {
     if (query.trim()) {
@@ -50,29 +40,12 @@ const MessageInput = ({ onSendMessage, onUploadFiles, isSending }) => {
   };
 
   return (
-    <div className="p-3 md:p-4 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-2xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/50 dark:border-slate-700/50 transition-all duration-300">
-      <div className="relative flex items-end gap-3 max-w-4xl mx-auto">
-        {/* Attachment button */}
-        <button
-          onClick={handleFileUploadClick}
-          className="p-3 rounded-full flex-shrink-0 transition-all duration-300 bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-transparent dark:border-white/5 active:scale-95"
-          disabled={isSending}
-          title="Upload JD or Resumes"
-        >
-          <FiPlus size={22} />
-          <input
-            type="file"
-            multiple
-            accept=".pdf,.doc,.docx"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
-          />
-        </button>
+    <div className="p-3 md:p-4 rounded-none shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-2xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/50 dark:border-slate-700/50 transition-all duration-300">
+      <div className="relative flex items-end gap-3 w-full">
+        {/* (upload button removed) */}
 
         {/* Textarea for General Query / JD */}
         <textarea
-          ref={textareaRef}
           value={query || jdText}
           onChange={(e) => {
             if (e.target.value.includes("Job Description") || e.target.value.length > 100) {
@@ -85,13 +58,13 @@ const MessageInput = ({ onSendMessage, onUploadFiles, isSending }) => {
           }}
           onKeyDown={handleKeyDown}
           placeholder="Ask a question or paste Job Description..."
-          rows="1"
-          className="flex-1 p-3.5 px-5 rounded-3xl resize-none outline-none transition-all duration-300 custom-scrollbar max-h-32 overflow-y-auto bg-white/50 focus:bg-white dark:bg-slate-950/50 dark:focus:bg-slate-900 focus:ring-2 focus:ring-emerald-500/50 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 border border-slate-200/50 dark:border-white/5 shadow-inner"
+          rows="2"
+          className="flex-1 p-3.5 pl-3 pr-6 rounded-none resize-none outline-none transition-all duration-300 custom-scrollbar h-12 bg-white/50 focus:bg-white dark:bg-slate-950/50 dark:focus:bg-slate-900 focus:ring-2 focus:ring-emerald-500/50 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 border border-slate-200/50 dark:border-white/5"
           disabled={isSending}
         />
         
         {/* K-value slider and display */}
-        <div className="flex items-center rounded-2xl p-2 px-4 flex-shrink-0 w-28 sm:w-36 md:w-44 transition-colors duration-300 bg-slate-100/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border border-slate-200/50 dark:border-white/5">
+        <div className="flex items-center rounded-none p-2 px-4 flex-shrink-0 w-28 sm:w-36 md:w-44 transition-colors duration-300 bg-slate-100/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border border-slate-200/50 dark:border-white/5">
             <FaSlidersH className="mr-2 flex-shrink-0 opacity-70" />
             <span className="flex-shrink-0 text-sm font-medium">K: {kValue}</span>
             <input

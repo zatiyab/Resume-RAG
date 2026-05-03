@@ -39,8 +39,7 @@ const LoginForm = ({ onLoginSuccess}) => {
             localStorage.setItem('user_id', data.user_id);
         }
         // alert('Login successful! Redirecting...'); // For now, just an alert
-        onLoginSuccess(); // Call callback to inform AuthPage
-        navigate('/'); // Redirect to main app dashboard
+        onLoginSuccess(); // Call callback to inform App which will handle navigation
       } else {
         setFormError('An unexpected error occurred during login.');
       }

@@ -1,15 +1,10 @@
 from qdrant_client.http import models as rest
 from qdrant_client.http.models import Distance, VectorParams, HnswConfigDiff  
 from qdrant_client.models import PointStruct, Filter, FieldCondition, MatchValue
-from app.core.config import llm
 import pdfplumber
-import json
-import unicodedata
+from app.core.config import llm
 import time
-from app.rag_logic.utils import (convert_all_docs_in_folder,
-                                 basic_text_normalization,
-)
-import os
+from app.rag_logic.utils import basic_text_normalization
 import datetime
 import io
 from pathlib import Path
@@ -17,12 +12,12 @@ from typing import Any
 from qdrant_client import QdrantClient
 from app.core.config import settings
 
-client = QdrantClient(
-    url=settings.QDRANT_URL, 
-    api_key=settings.QDRANT_API_KEY,
-)
-
-print(client.get_collections())
+client = None
+try:
+    client = QdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY)
+except Exception as e:
+    client = None
+    print(f"Warning: Qdrant client initialization failed: {e}")
 import cohere
 co = cohere.ClientV2()
 
@@ -64,79 +59,79 @@ def _embed_text(text: str) -> list[float]:
     raise ValueError("Could not extract float embedding from Cohere response")
 
 
-def llm_create_metadata(resume:str,resume_name):
-    # ... (same as your current llm_create_metadata function) ...
-    prompt_text = f'''
- You are an expert resume parser.
+def llm_summarize_resume(resume:str):
+    prompt_text = f'''You are a resume parser for a RAG (Retrieval-Augmented Generation) system.
 
-        Your task is to extract metadata from the resume provided below and return it in the **exact JSON format** specified. The output must be a **flat JSON object** with no nested values or lists of objects. Each value must be a simple string. If any field is not available, leave it as an empty string `""` (do not remove the key).
+Your job is to extract and normalize resume content into structured Markdown.
+This output will be chunked and embedded — so clarity, consistency, and completeness matter more than brevity.
 
-        💡 Output Requirements:
-        - Output must be valid JSON only — no preamble, no explanation.
-        - All values must be strings (even for numbers, dates, booleans).
-        - Include appropriate content type in each value (e.g., phone, email, numeric string, year).
-        - Concatenate items as comma-separated strings where appropriate.
-        - Give no explanations
+---
 
-        💼 Resume to parse:
-        \"\"\"
-        {resume}
-        \"\"\"
+## Output Format (always use this exact structure):
 
-        🎯 Target JSON structure (with field descriptions and type hints):
-        {{
-        "name": "Full name of the candidate (string)",
-        "email": "Primary email address (string)",
-        "phone": "Phone number with or without country code (string)",
-        "location": "Current Location give only state and country (string)",        
+### CONTACT
+- Name:
+- Email:
+- Phone:
+- Location:
+- LinkedIn:
+- GitHub/Portfolio:
 
-        "total_years_of_experience": "(Mandatory-Give the resume some value for this key always)Total professional experience in years (string of float e.g., '5.6')",
-        "current_job_title": "Most recent job title (string)",
-        "current_company": "Most recent company name (string)",
-        "current_employment_location": "Location of the current job (string)",        
+### SUMMARY
+One or two sentences capturing the candidate's profile. If absent, write: _Not provided._
+
+### SKILLS
+Group into categories. Examples:
+- **Languages:** Python, JavaScript, SQL
+- **Frameworks:** React, FastAPI, LangChain
+- **Tools & Platforms:** Docker, AWS, Git
+- **Concepts:** Machine Learning, RAG, REST APIs
+
+### EXPERIENCE
+For each role:
+**[Job Title] — [Company], [Location] | [Start Date] – [End Date or Present]**
+- Bullet describing responsibility or achievement (as concise as possible)
+
+### PROJECTS
+For each project:
+**[Project Name]** | [Tech stack, comma-separated]
+- What it does and your role
+- Link (if provided)
+
+### EDUCATION
+**[Degree], [Field] — [Institution] | [Year]**
+- GPA or honors (only if mentioned)
+
+### CERTIFICATIONS
+- [Certification Name] — [Issuer] ([Year])
+
+---
+
+## Rules:
+- Normalize synonyms: "ML" → "Machine Learning", "NLP" → "Natural Language Processing", "JS" → "JavaScript"
+- Expand all abbreviations to their full form
+- Preserve all dates exactly as written; do not infer or guess missing dates
+- If a section is missing from the resume, write: _Not provided._
+- Do not invent, infer, or hallucinate any information
+- Remove filler phrases ("responsible for", "worked on", "helped with") — use action verbs
+- Keep bullet points factual and scannable
+- Output only the Markdown. No preamble, no explanation.
+- Keep as concise as possible while following the structure and rules above.
 
 
-        "degree_major": "Major/field of study (string)",
-
-       
-        "skills_total_keywords": "Union of all skills-apis,frameworks,databases,languages,cloud-hosting,devtools,no job positions,other non cs skills too(flat comma-separated string)",
-
-        "spoken_languages": "Fluent or proficient languages (comma-separated string)",
-
-        "availability_for_joining": "Availability to join (e.g., 'Immediate', '1 Month') (string)",
-        
-        }}
-        '''
+RESUME TO PARSE:
+\"\"\"
+{resume}
+\"\"\"
+'''
     try:
-        # Generates metadata/payload for the given resume
-        
-
-        # Add a delay between calls
-        time.sleep(6.5)  # 60 seconds / 10 calls = 6 seconds per call
-
-        metadata_result = llm.invoke(prompt_text)
-        print("Here is metadata result")
-        print(metadata_result)
-        try:
-            data = metadata_result.content.strip('```')
-            data = data.lstrip('json')
-            metadata_dict = json.loads(data)
-            print()
-            print(data)
-            print('-'*50)
-            print(metadata_dict)
-        except:
-            print('Data Loading Problem')
-            print(data)
-            metadata_dict = {'source':resume_name}
-            
-   
-        return metadata_dict
+        time.sleep(6.5) 
+        summarized_resume = llm.invoke(prompt_text)
     except Exception as e:
-        print(e,flush=True)
-        print('LLM problem')
-        print(prompt_text)
-        return {'source':resume_name}
+        print(f"Error occurred while summarizing resume: {e}")
+        summarized_resume = "Error occurred while summarizing resume."
+
+    return summarized_resume.content.strip() if summarized_resume and summarized_resume.content else "No summary available."
 
 
 def add_vectors(resumes_folder: str | Path | None = None, user_id=None):
@@ -175,15 +170,11 @@ def add_vectors(resumes_folder: str | Path | None = None, user_id=None):
         print(f"Error checking existing vectors in Qdrant: {e}")
         files_vector = []
         
-    try:
-        all_vec_global = client.scroll(collection_name='resumes', with_payload=False, limit=1000000)
-        last_indx = max([x.id for x in all_vec_global[0]]) if all_vec_global and all_vec_global[0] else 0
-    except:
-        last_indx = 0
-
-    print('Last Vector Index Globally: ', last_indx, flush=True)
-    print('Existing Vectors for user: ', files_vector)
     
+    user_resumes_vec_cnt = len(files_vector)
+    print('Last Vector Index for user ', user_id, ': ', user_resumes_vec_cnt, flush=True)
+    print('Existing Vectors for user ', user_id, ': ', files_vector)
+
     resumes = [i for i in resumes if i not in files_vector]
     skipped_existing = total_pdf_files - len(resumes)
     print('Total No. of new resumes: ', len(resumes))
@@ -218,54 +209,15 @@ def add_vectors(resumes_folder: str | Path | None = None, user_id=None):
             print(f"Failed to process {resume} from Supabase: {e}")
     
     for resume, resume_data in resumes_data_dict.items():
-        last_indx+=1
+        user_resumes_vec_cnt+=1
         resume_data= basic_text_normalization(resume_data)
-        metadata_dict = llm_create_metadata(resume_data.lower(),resume_name=resume)
-        vector = _embed_text(resume_data.lower())
+        resume_data = llm_summarize_resume(resume_data)
+        vector = _embed_text(resume_data)
     
-        list_fields =[
-            "skills_languages",
-            "skills_frameworks",
-            "skills_databases",
-            "skills_devtools",
-            "skills_apis",
-            "skills_other",
-            "skills_total_keywords",
-            "project_titles",
-            "project_domains",
-            "project_roles",
-            "project_technologies_used",
-            "spoken_languages",
-            "interests_or_hobbies"
-        ]
-
-        for k,v in metadata_dict.items():
-            if k == 'total_years_of_experience' and (v != "" and v != " "): # Changed condition to check for non-empty string
-                try:
-                    metadata_dict[k] =float(v)
-                except ValueError: # Catch specific error for float conversion
-                    metadata_dict[k] ='' # Set to empty string on failure
-            if k == 'graduation_year' and (v != "" and v != " "): # Changed condition
-                try:
-                    metadata_dict[k] = int(v)
-                except ValueError: # Catch specific error for int conversion
-                    metadata_dict[k] = "" # Set to empty string on failure
-            
-
-            # Normalizing case for string values in metadata_dict for consistency
-            if isinstance(v, str):
-                metadata_dict[k] = v.lower()
+        metadata_dict = {'source': resume, 'page_content': resume_data,'user_id': user_id}  
         
-        for k,v in metadata_dict.items():
-            if k in list_fields and isinstance(v, str): # Only split if it's a string
-                metadata_dict[k] = [i.strip() for i in v.split(',') if i.strip()] # Split by comma and strip whitespace
-        
-        metadata_dict['source'] = resume
-        metadata_dict['page_content'] = resume_data
-        metadata_dict['user_id'] = user_id
-        
-        points.append(PointStruct(id=last_indx, vector=vector, payload=metadata_dict))
-        print(f'At {last_indx}/{len(resumes_data_dict)}, {resume}') # Use len(resumes_data_dict) for total unique resumes processed
+        points.append(PointStruct(id=user_resumes_vec_cnt, vector=vector, payload=metadata_dict))
+        print(f'At {user_resumes_vec_cnt}/{len(resumes_data_dict)}, {resume}') 
     operation_info = None
     if points: # Check if points list is not empty
         operation_info = client.upsert(
@@ -302,7 +254,6 @@ def add_history(history_text: str, hist_id, user_id):
         )
 
     print(f"--- DEBUG: History Added: {operation_info} ---")
-
 
 
 def get_relevant_docs(user_query,user_id,collection,k=5):
@@ -374,6 +325,9 @@ def get_relevant_docs(user_query,user_id,collection,k=5):
 def initialize_app_data(user_id):
     print("--- Initializing collections and data... ---")
 
+    if client is None:
+        raise RuntimeError("Qdrant client is not initialized. Check QDRANT_URL, QDRANT_API_KEY and network connectivity.")
+
     if not client.collection_exists("resumes"):
         print("--- Creating 'resumes' collection ---")
         client.create_collection(
@@ -387,12 +341,12 @@ def initialize_app_data(user_id):
         )
         add_vectors(user_id=user_id) 
 
-        keyword_lst = ["user_id", "name", "email", "phone", "location", "current_job_title", "current_company", "current_employment_location", "degree_major", "skills_total_keywords", "spoken_languages", "availability_for_joining"]
+        # keyword_lst = ["user_id", "name", "email", "phone", "location", "current_job_title", "current_company", "current_employment_location", "degree_major", "skills_total_keywords", "spoken_languages", "availability_for_joining"]
 
-        client.create_payload_index(collection_name="resumes", field_name="total_years_of_experience", field_schema=rest.PayloadSchemaType.FLOAT)
-        client.create_payload_index(collection_name="resumes", field_name="graduation_year", field_schema=rest.PayloadSchemaType.INTEGER)
-        for k in keyword_lst:
-            client.create_payload_index(collection_name="resumes", field_name=k, field_schema=rest.PayloadSchemaType.KEYWORD)
+        # client.create_payload_index(collection_name="resumes", field_name="total_years_of_experience", field_schema=rest.PayloadSchemaType.FLOAT)
+        # client.create_payload_index(collection_name="resumes", field_name="graduation_year", field_schema=rest.PayloadSchemaType.INTEGER)
+        # for k in keyword_lst:
+        client.create_payload_index(collection_name="resumes", field_name='user_id', field_schema=rest.PayloadSchemaType.KEYWORD)
     
     # Initialize 'history' collection
     if not client.collection_exists("history"):
@@ -401,6 +355,12 @@ def initialize_app_data(user_id):
             collection_name="history",
             vectors_config=VectorParams(size=1536, distance=Distance.COSINE, on_disk=False)
         )
+        # Create payload index for user_id so filters/deletes by user_id are supported
+        try:
+            client.create_payload_index(collection_name="history", field_name="user_id", field_schema=rest.PayloadSchemaType.KEYWORD)
+            print("Created payload index 'user_id' on 'history' collection")
+        except Exception as e:
+            print(f"Warning: failed to create payload index for history.user_id: {e}")
     print("--- Initial app data setup complete. ---")
 
 

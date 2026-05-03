@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from langchain_cohere import ChatCohere
 
 load_dotenv()
+
 llm = ChatCohere(
     model="command-r-plus-08-2024",
     timeout_seconds=60,

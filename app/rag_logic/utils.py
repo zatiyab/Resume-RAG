@@ -83,22 +83,20 @@ def basic_text_normalization(text: str) -> str:
     # Fix common encoding issues
     text = text.encode('ascii', 'ignore').decode('ascii')
     
-    # Remove excessive whitespace
-    text = re.sub(r'\s+', ' ', text)
     
     # Remove special characters but keep meaningful punctuation
     text = re.sub(r'[^\w\s\-\.\,\(\)\/]', '', text)
     
-    # Normalize case (but preserve acronyms)
-    words = text.split()
-    normalized_words = []
-    for word in words:
-        if word.isupper() and len(word) > 1:  # Keep acronyms
-            normalized_words.append(word)
-        else:
-            normalized_words.append(word.lower())
+    # # Normalize case (but preserve acronyms)
+    # words = text.split()
+    # normalized_words = []
+    # for word in words:
+    #     if word.isupper() and len(word) > 1:  # Keep acronyms
+    #         normalized_words.append(word)
+    #     else:
+    #         normalized_words.append(word.lower())
     
-    return ' '.join(normalized_words).strip()
+    return text
 
 
 def convert_doc_content_to_pdf_bytes(content_bytes: bytes, original_filename: str) -> bytes:

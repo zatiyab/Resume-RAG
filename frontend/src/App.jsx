@@ -16,13 +16,13 @@ function App() {
   // Check auth status on initial load and whenever location changes (from react-router)
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    setIsAuthenticated(!!token); // Convert token presence to boolean
-  }, [navigate]); // Depend on navigate to re-check when URL changes (e.g. from /auth to /)
+    setIsAuthenticated(!!token);
+  }, []); // only run once on mount
 
   // Function to be called after successful login (from AuthPage)
   const handleLoginSuccess = () => {
     setIsAuthenticated(true);
-    // navigate('/'); // AuthPage's LoginForm already handles this redirection
+    navigate('/chat'); // ensure single SPA navigation to dashboard after login
   };
 
   return (
@@ -33,14 +33,19 @@ function App() {
 
         {/* Protected Route for Dashboard */}
         <Route
-          path="/"
+          path="/chat"
           element={isAuthenticated ? <DashboardAppUI /> : <Navigate to="/auth" replace />} // Redirect if not authenticated
+        />
+
+        <Route
+          path="/"
+          element={<Navigate to="/chat" replace />}
         />
 
         {/* Fallback for unknown routes - redirects to dashboard if authenticated, else to auth */}
         <Route
           path="*"
-          element={isAuthenticated ? <Navigate to="/" replace /> : <Navigate to="/auth" replace />}
+          element={isAuthenticated ? <Navigate to="/chat" replace /> : <Navigate to="/auth" replace />}
         />
       </Routes>
     </ThemeProvider>

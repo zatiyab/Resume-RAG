@@ -21,13 +21,41 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Run API server:
+Configure environment variables (example using `.env`):
+
+```bash
+# Example .env
+DB_URL="postgresql://<user>:<password>@<host>:5432/<database>"
+SECRET_KEY="your_secret_key"
+COHERE_API_KEY="your_cohere_key"
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Run Alembic to ensure the database schema matches the models (applies pending migrations):
+
+```bash
+alembic upgrade head
+```
+
+Create a new migration after changing models (autogenerate):
+
+```bash
+alembic revision --autogenerate -m "describe change"
+alembic upgrade head
+```
+
+Run API server (backend):
 
 ```bash
 python server.py
 ```
 
-The backend starts on `http://localhost:5000`.
+The backend defaults to `http://localhost:5000` unless configured otherwise.
 
 ## Frontend
 
@@ -41,21 +69,18 @@ npm run dev
 The frontend dev server starts on Vite's default local URL.
 
 ## Qdrant
-
-Create local data folder:
-
-```bash
-mkdir qdrant_data
-```
-
-Start Qdrant with Docker:
+We use Qdrant Cloud for vector storage by default. Configure the following environment variables (example `.env` entries):
 
 ```bash
-docker run -d -p 6333:6333 -v $(pwd)/qdrant_data:/qdrant/storage qdrant/qdrant
+# Qdrant Cloud
+QDRANT_URL="https://<your-cloud-endpoint>"        # e.g. https://xyz123.qdrant.cloud
+QDRANT_API_KEY="your_qdrant_api_key"
 ```
 
-Dashboard:
+How to obtain credentials:
 
-```text
-http://localhost:6333/dashboard
-```
+- Sign in to Qdrant Cloud and create a project/cluster.
+- Copy the cluster URL and an API key (service or access key) into your `.env`.
+
+
+

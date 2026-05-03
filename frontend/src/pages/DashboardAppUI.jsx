@@ -153,19 +153,16 @@ function DashboardAppUI() {
         chatSessions={chatSessions}
         onBulkUploadFiles={handleBulkUploadFiles}
       />
-      <div className="flex flex-col flex-1 relative">
+      <div className="flex flex-col flex-1">
         <header className="p-5 text-center shadow-sm z-10 backdrop-blur-3xl bg-white/40 dark:bg-black/20 border-b border-black/5 dark:border-white/5 transition-colors duration-300">
           <h1 className="text-3xl font-extrabold tracking-tight font-heading bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300 text-transparent bg-clip-text drop-shadow-sm">
             HireMind AI Assistant
           </h1>
         </header>
         <ChatWindow messages={messages} onDownloadResumes={handleDownloadResumes} />
-        
-        {/* Floating Input Container wrapper */}
-        <div className="absolute bottom-6 left-0 right-0 px-4 md:px-12 z-20 pointer-events-none">
-            <div className="pointer-events-auto">
-                <MessageInput onSendMessage={handleSendMessage} onUploadFiles={handleBulkUploadFiles} isSending={isSending} />
-            </div>
+        {/* Fixed Input Container placed in flow so content doesn't go behind it */}
+        <div className="w-full px-0 md:px-0 z-20">
+            <MessageInput onSendMessage={handleSendMessage} onUploadFiles={handleBulkUploadFiles} isSending={isSending} />
         </div>
       </div>
     </div>

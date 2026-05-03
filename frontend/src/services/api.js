@@ -26,10 +26,73 @@ export const uploadResumes = async (files) => {
   return response.json();
 };
 
+export const getUserResumes = async () => {
+  const userId = localStorage.getItem('user_id') || "be54d72a-4e8f-450b-99a7-8b9770b6a469";
+  const response = await fetch(`${API_BASE_URL}/resumes?user_id=${userId}`);
+  if (!response.ok) {
+    let errorBody = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      errorBody = { detail: 'Failed to fetch resumes' };
+    }
+    throw new Error(errorBody?.detail || 'Failed to fetch resumes');
+  }
+  return response.json();
+};
+
+export const getResume = async (fileName) => {
+  const userId = localStorage.getItem('user_id') || "be54d72a-4e8f-450b-99a7-8b9770b6a469";
+  const response = await fetch(`${API_BASE_URL}/resume?user_id=${userId}&file_name=${encodeURIComponent(fileName)}`);
+  if (!response.ok) {
+    let errorBody = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      errorBody = { detail: 'Failed to fetch resume' };
+    }
+    throw new Error(errorBody?.detail || 'Failed to fetch resume');
+  }
+  return response.blob();
+};
+
+export const deleteResume = async (fileName) => {
+  const userId = localStorage.getItem('user_id') || "be54d72a-4e8f-450b-99a7-8b9770b6a469";
+  const response = await fetch(`${API_BASE_URL}/resume?user_id=${userId}&file_name=${encodeURIComponent(fileName)}`, {
+    method: 'DELETE'
+  });
+  if (!response.ok) {
+    let errorBody = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      errorBody = { detail: 'Failed to delete resume' };
+    }
+    throw new Error(errorBody?.detail || 'Failed to delete resume');
+  }
+  return response.json();
+};
+
+export const clearCollections = async () => {
+  const userId = localStorage.getItem('user_id') || "be54d72a-4e8f-450b-99a7-8b9770b6a469";
+  const response = await fetch(`${API_BASE_URL}/clear_collections?user_id=${userId}`, {
+    method: 'DELETE'
+  });
+  if (!response.ok) {
+    let errorBody = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      errorBody = { detail: 'Failed to clear collections' };
+    }
+    throw new Error(errorBody?.detail || 'Failed to clear collections');
+  }
+  return response.json();
+};
 export const searchResumes = async (query, k,isJDsearch) => {
   const userId = localStorage.getItem('user_id') || "be54d72a-4e8f-450b-99a7-8b9770b6a469";
   console.log(JSON.stringify({ "user_id": userId, "user_query":query, "k":k}))
-  const response = await fetch(`${API_BASE_URL}/`, {
+  const response = await fetch(`${API_BASE_URL}/chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
