@@ -88,6 +88,11 @@ body {
   color: var(--hiremind-text-dark-primary);
 }
 
+body.dark {
+  background-color: var(--hiremind-darkblue);
+  color: var(--hiremind-text-dark-primary);
+}
+
 body.light {
   background-color: var(--hiremind-light-bg);
   color: var(--hiremind-text-light-primary);
@@ -120,6 +125,24 @@ body::before {
   pointer-events: none;
   z-index: -1;
   transition: all 0.3s ease;
+}
+body.dark::before {
+  background:
+    radial-gradient(
+      circle at 20% 80%,
+      rgba(64, 64, 64, 0.3) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 20%,
+      rgba(96, 96, 96, 0.3) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 40% 40%,
+      rgba(128, 128, 128, 0.2) 0%,
+      transparent 50%
+    );
 }
 body.light::before {
   /* light class applied by App.jsx to body */
@@ -195,27 +218,63 @@ body.light .header h1 {
 /* Make scrollbars thinner and reserve gutter so they appear inside elements */
 .custom-scrollbar {
   scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(15, 118, 110, 0.75) rgba(15, 23, 42, 0.35);
   scrollbar-gutter: stable; /* Reserve space for scrollbar inside the element */
 }
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: var(--scrollbar-track-dark, var(--hiremind-element-dark));
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.06),
+    rgba(15, 23, 42, 0.14)
+  );
   border-radius: 999px;
+  margin: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb-dark, var(--hiremind-text-light-secondary));
+  background: linear-gradient(
+    180deg,
+    rgba(52, 211, 153, 0.95),
+    rgba(20, 184, 166, 0.95)
+  );
   border-radius: 999px;
-  border: 2px solid transparent; /* creates inner padding so thumb looks inset */
+  border: 3px solid transparent; /* creates inner padding so thumb looks inset */
   background-clip: padding-box;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(16, 185, 129, 1),
+    rgba(6, 182, 212, 1)
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    0 0 0 1px rgba(16, 185, 129, 0.15);
 }
 body.light .custom-scrollbar::-webkit-scrollbar-track {
-  background: var(--scrollbar-track-light, var(--hiremind-element-light));
+  background: linear-gradient(
+    180deg,
+    rgba(226, 232, 240, 0.95),
+    rgba(241, 245, 249, 0.95)
+  );
 }
 body.light .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb-light, var(--hiremind-text-dark-secondary));
+  background: linear-gradient(
+    180deg,
+    rgba(34, 197, 94, 0.85),
+    rgba(20, 184, 166, 0.85)
+  );
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+body.light .custom-scrollbar {
+  scrollbar-color: rgba(20, 184, 166, 0.85) rgba(226, 232, 240, 0.95);
 }
 
 /* File selector button - previously @apply, now hardcoded values/vars */

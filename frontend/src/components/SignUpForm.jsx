@@ -18,6 +18,7 @@ const SignUpForm = ({ setIsSignUp }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState(''); // For displaying form errors
   const [formSuccess, setFormSuccess] = useState(''); // For displaying success messages
+  const isDark = theme === 'dark';
 
 
   const handleChange = (e) => {
@@ -66,22 +67,23 @@ const SignUpForm = ({ setIsSignUp }) => {
       setIsLoading(false);
     }
   };
-  const inputClasses = `w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-hiremind-purple-accent transition-all duration-200 text-base border 
-    ${theme === 'dark'
-      ? 'bg-hiremind-element-dark border-white/10 text-hiremind-text-dark-primary placeholder-hiremind-text-dark-secondary'
-      : 'bg-hiremind-input-bg-light border-hiremind-input-border-light text-hiremind-text-light-primary placeholder-hiremind-text-light-secondary'}`;
+  const inputClasses = `w-full px-4 py-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all duration-200 text-base border ${
+    isDark
+      ? 'bg-slate-900/80 border-white/10 text-slate-100 placeholder-slate-500'
+      : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
+  }`;
 
-  const iconClasses = `text-hiremind-purple-accent text-lg ${theme === 'dark' ? 'opacity-80' : 'opacity-100'}`;
+  const iconClasses = `text-emerald-500 text-lg ${isDark ? 'opacity-90' : 'opacity-100'}`;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {formError && (
-        <div className="text-red-500 font-bold text-sm text-center py-2 px-3 rounded-lg bg-red-500/20 border border-red-500/50 my-2">
+        <div className={`font-medium text-sm text-center py-3 px-4 rounded-2xl border ${isDark ? 'text-red-200 bg-red-500/10 border-red-500/20' : 'text-red-700 bg-red-50 border-red-200'}`}>
           {formError}
         </div>
       )}
       {formSuccess && (
-        <div className="text-green-500 font-bold text-sm text-center py-2 px-3 rounded-lg bg-green-500/20 border border-green-500/50 my-2">
+        <div className={`font-medium text-sm text-center py-3 px-4 rounded-2xl border ${isDark ? 'text-emerald-200 bg-emerald-500/10 border-emerald-500/20' : 'text-emerald-700 bg-emerald-50 border-emerald-200'}`}>
           {formSuccess}
         </div>
       )}
@@ -122,17 +124,14 @@ const SignUpForm = ({ setIsSignUp }) => {
           value={formData.password}
           onChange={handleChange}
           placeholder="Password"
-          className={`pl-12 pr-16 ${inputClasses}`} // Increased right padding for injected icon
+          className={`pl-12 pr-16 ${inputClasses}`}
 
           required
         />
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
-
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-hiremind-purple-accent text-lg opacity-80 hover:opacity-100 focus:outline-none z-10 
-            px-2 py-1 rounded-full transition-colors 
-            ${theme === 'dark' ? 'bg-hiremind-element-dark/80' : 'bg-hiremind-input-bg-light/80'}" // Added background and padding for button
+          className={`absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 text-lg hover:opacity-100 focus:outline-none z-10 px-2 py-1 rounded-full transition-colors ${isDark ? 'bg-slate-900/80 opacity-90' : 'bg-white/80 opacity-80'}`}
 
         >
           {showPassword ? <FiEyeOff /> : <FiEye />}
@@ -142,8 +141,7 @@ const SignUpForm = ({ setIsSignUp }) => {
       {/* Submit Button */}
       <button
         type="submit"
-        className="w-full py-3 rounded-xl font-semibold shadow-lg transition-all duration-300 
-          bg-hiremind-purple-accent hover:bg-hiremind-purple-accent/90 text-black focus:outline-none focus:ring-2 focus:ring-hiremind-purple-accent focus:ring-opacity-80"
+        className="w-full py-3.5 rounded-2xl font-semibold shadow-lg transition-all duration-300 bg-gradient-to-r from-emerald-500 to-teal-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 hover:shadow-emerald-500/30 hover:-translate-y-0.5 active:scale-95"
         disabled={isLoading}
       >
         {isLoading ? 'Creating Account...' : 'CREATE ACCOUNT'}

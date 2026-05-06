@@ -2,8 +2,7 @@
 import React, { useState } from 'react';
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { useTheme } from '../contexts/ThemeContext.jsx';
-import { loginUser } from '../services/api.js'; // Import loginUser API
-import { useNavigate } from 'react-router-dom';
+import { loginUser } from '../services/api.js';
 
 const LoginForm = ({ onLoginSuccess}) => {
   const { theme } = useTheme();
@@ -14,7 +13,8 @@ const LoginForm = ({ onLoginSuccess}) => {
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState(''); 
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+
+  const isDark = theme === 'dark';
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -35,9 +35,6 @@ const LoginForm = ({ onLoginSuccess}) => {
         setFormError(data.detail);
       } else if (data.access_token) { 
         localStorage.setItem('access_token', data.access_token);
-        if (data.user_id) {
-            localStorage.setItem('user_id', data.user_id);
-        }
         // alert('Login successful! Redirecting...'); // For now, just an alert
         onLoginSuccess(); // Call callback to inform App which will handle navigation
       } else {
@@ -52,15 +49,21 @@ const LoginForm = ({ onLoginSuccess}) => {
 
   };
 
-  const inputClasses = `w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-hiremind-purple-accent transition-all duration-200 text-base border 
-    ${theme === 'dark' 
-      ? 'bg-hiremind-element-dark border-white/10 text-hiremind-text-dark-primary placeholder-hiremind-text-dark-secondary' 
-      : 'bg-hiremind-input-bg-light border-hiremind-input-border-light text-hiremind-text-light-primary placeholder-hiremind-text-light-secondary'}`;
+  const inputClasses = `w-full px-4 py-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all duration-200 text-base border ${
+    isDark
+      ? 'bg-slate-900/80 border-white/10 text-slate-100 placeholder-slate-500'
+      : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
+  }`;
 
-  const iconClasses = `text-hiremind-purple-accent text-lg ${theme === 'dark' ? 'opacity-80' : 'opacity-100'}`;
+  const iconClasses = `text-emerald-500 text-lg ${isDark ? 'opacity-90' : 'opacity-100'}`;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {formError && (
+        <div className={`font-medium text-sm text-center py-3 px-4 rounded-2xl border ${isDark ? 'text-red-200 bg-red-500/10 border-red-500/20' : 'text-red-700 bg-red-50 border-red-200'}`}>
+          {formError}
+        </div>
+      )}
       {/* Email Input */}
       <div className="relative">
         <FiMail className={`absolute left-4 top-1/2 -translate-y-1/2 ${iconClasses}`} />
@@ -90,7 +93,7 @@ const LoginForm = ({ onLoginSuccess}) => {
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-hiremind-purple-accent text-lg opacity-80 hover:opacity-100 focus:outline-none"
+            className={`absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 text-lg hover:opacity-100 focus:outline-none ${isDark ? 'opacity-90' : 'opacity-80'}`}
         >
           {showPassword ? <FiEyeOff /> : <FiEye />}
         </button>
@@ -106,8 +109,7 @@ const LoginForm = ({ onLoginSuccess}) => {
       {/* Submit Button */}
       <button
         type="submit"
-        className="w-full py-3 rounded-xl font-semibold shadow-lg transition-all duration-300 
-          bg-hiremind-purple-accent hover:bg-hiremind-purple-accent/90 text-black focus:outline-none focus:ring-2 focus:ring-hiremind-purple-accent focus:ring-opacity-50"
+        className="w-full py-3.5 rounded-2xl font-semibold shadow-lg transition-all duration-300 bg-gradient-to-r from-emerald-500 to-teal-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 hover:shadow-emerald-500/30 hover:-translate-y-0.5 active:scale-95"
           disabled={isLoading}
       >
         {isLoading ? 'Signing In...' : 'LOGIN'}

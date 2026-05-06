@@ -1,98 +1,24 @@
-import asyncio
-import re
-from pathlib import Path
-from uuid import uuid4
-import httpx
-from asyncpg.exceptions import DuplicatePreparedStatementError
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from sqlalchemy.orm import Session
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
-from pydantic import BaseModel
+from app.api.dependencies import get_db_with_retry
+from app.schemas.req_models import DownloadRequest
 from fastapi.responses import StreamingResponse
 import zipfile
 import io
+import asyncio
+import re
+from pathlib import Path
+import httpx
+
+from app.schemas.req_models import DownloadRequest
+
 from app.services.resumes_storage import download_resume_bytes, list_user_resumes, delete_resume
-from app.core.database import get_db
-from app.crud.user_crud import user_crud
-
-from app.schemas.req_models import ChatPost
-from app.schemas.user_schemas import UserCreate, UserInDB, UserLogin
-
-from app.services.auth_service import AuthService
-from app.services.chat import post_chat_messages
 from app.services.qdrant_client import add_vectors, SUPPORTED_RESUME_EXTENSIONS
 
-
-router = APIRouter()
-
-@router.post("/chat")
-async def post_chat(request:ChatPost,db:Session = Depends(get_db)):
-    return await post_chat_messages(request,db)
-
-def get_auth_service(db: Session = Depends(get_db)) -> AuthService: # <--- Change type hint to Session
-    return AuthService(db)
-
-
-retry_db_exception = retry(
-    stop=stop_after_attempt(3),
-    wait=wait_fixed(1),
-    retry=retry_if_exception_type(DuplicatePreparedStatementError), # Still retry on this error type
-    reraise=True
-)
-
-@router.post("/signup", response_model=UserInDB, status_code=status.HTTP_201_CREATED)
-@retry_db_exception
-async def signup_user(user_in: UserCreate, db: Session = Depends(get_db)): # <--- Change type hint to Session
-    try:
-        existing_user = await user_crud.get_by_email(db, email=user_in.email) 
-        if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Email already registered"
-            )
-        
-        hashed_password = AuthService.get_password_hash(user_in.password)
-        # user_crud.create is now async
-        user = await user_crud.create(db, user_in=user_in, hashed_password=hashed_password)
-        return user
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        print(f"ERROR: Unhandled exception during signup for email {user_in.email}: {type(e).__name__} - {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected server error occurred during signup. Please try again."
-        )
-
-@router.post("/login")
-@retry_db_exception
-async def login_user(user_in: UserLogin, auth_service: AuthService = Depends(get_auth_service)): # <--- Change type hint to Session
-    try:
-        user = await auth_service.authenticate_user(user_in.email, user_in.password)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        access_token = auth_service.create_access_token(data={"sub": str(user.id)})
-        return {"access_token": access_token, "token_type": "bearer", "user_id": str(user.id)}
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        print(f"ERROR: Unhandled exception during login for email {user_in.email}: {type(e).__name__} - {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected server error occurred during login."
-        )
-
-
-class DownloadRequest(BaseModel):
-    files: list[str]
-    user_id: str
+router = APIRouter(tags=["resumes"])
 
 @router.post("/upload_resumes")
-async def upload_resumes(files: list[UploadFile] = File(...), user_id: str = None):
+async def upload_resumes(files: list[UploadFile] = File(...), user_id: str = None,db: Session = Depends(get_db_with_retry)):
     # Debug: log incoming file info to help diagnose empty uploads
     try:
         file_names = [f.filename for f in files] if files else []
@@ -146,7 +72,9 @@ async def upload_resumes(files: list[UploadFile] = File(...), user_id: str = Non
             },
         )
 
-    ingestion_result = await asyncio.to_thread(add_vectors, user_id=user_id)
+    # Pass the newly uploaded files to add_vectors to avoid redundant Supabase fetch
+    # and duplicate checks - we already know these files are new
+    ingestion_result = await asyncio.to_thread(add_vectors, user_id=user_id, files_to_process=saved_files,db=db)
 
     return {
         "message": "Resumes uploaded and indexed successfully",
@@ -219,16 +147,30 @@ async def remove_resume(user_id: str, file_name: str):
     try:
         file_path = f"{user_id}/{file_name}"
         await asyncio.to_thread(delete_resume, file_path)
-        return {"message": "deleted"}
+        from app.services.qdrant_client import remove_resume_from_qdrant
+        await asyncio.to_thread(remove_resume_from_qdrant, user_id, file_name)
+        return {"message": f"Resume '{file_name}' deleted successfully"}
     except Exception as e:
         print(f"Error deleting resume {file_name} for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail="Error deleting resume")
 
 
-@router.delete("/clear_collections")
-async def clear_collections(user_id: str):
+@router.delete("/clear_data")
+async def clear_data(user_id: str,db: Session = Depends(get_db_with_retry)):
     """Clear all resumes and history vectors for a user from Qdrant collections."""
-    try:
+    try:  
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get("http://localhost:5000/resumes", params={"user_id": user_id})
+                data = response.json()
+                for resume_name in [i['name'] for i in data['resumes']]:
+                    await client.delete("http://localhost:5000/resume", params={"user_id": user_id, "file_name": resume_name})
+        except Exception as e:
+            print(f"Error clearing resumes from storage: {e}")
+        
+        
+        # Delete from resumes collection
+
         from app.services.qdrant_client import client
         from qdrant_client.models import Filter, FieldCondition, MatchValue
         
@@ -236,8 +178,6 @@ async def clear_collections(user_id: str):
         user_filter = Filter(
             must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]
         )
-        
-        # Delete from resumes collection
         try:
             client.delete(collection_name="resumes", points_selector=user_filter)
             print(f"Cleared resumes collection for user {user_id}")
@@ -250,15 +190,12 @@ async def clear_collections(user_id: str):
             print(f"Cleared history collection for user {user_id}")
         except Exception as e:
             print(f"Error clearing history collection: {e}")
-        
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get("http://localhost:5000/resumes", params={"user_id": user_id})
-                data = response.json()
-                for resume_name in [i['name'] for i in data['resumes']]:
-                    await client.delete("http://localhost:5000/resume", params={"user_id": user_id, "file_name": resume_name})
+            from app.crud.chat_crud import delete_chat_history
+            delete_chat_history(user_id, db)
         except Exception as e:
-            print(f"Error clearing resumes from storage: {e}")
+            print(f"Error clearing chat history: {e}")
+
         return {"message": "Data deleted successfully"}
     except Exception as e:
         print(f"Error clearing data for user {user_id}: {e}")

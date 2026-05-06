@@ -1,29 +1,57 @@
-// frontend/src/components/ChatWindow.jsx (updated)
-import React, { useRef, useEffect } from 'react';
-import Message from './Message.jsx'; // Make sure .jsx extension is here
+// frontend/src/components/ChatWindow.jsx (updated with lazy loading)
+import React, { useRef, useEffect, useState } from 'react';
+import Message from './Message.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 
-
-const ChatWindow = ({ messages, onDownloadResumes }) => {
+const ChatWindow = ({ messages, onDownloadResumes, onLoadMore, isLoadingMore = false, hasMore = false }) => {
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const { theme } = useTheme();
+  const [scrolledFromBottom, setScrolledFromBottom] = useState(false);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!scrolledFromBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrolledFromBottom]);
+
+  // Handle scroll event for lazy loading
+  const handleScroll = (e) => {
+    const container = e.target;
+    const isNearTop = container.scrollTop < 100;
+    const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+
+    setScrolledFromBottom(!isAtBottom);
+
+    // Trigger load more when user scrolls near the top
+    if (isNearTop && hasMore && !isLoadingMore && onLoadMore) {
+      onLoadMore();
+    }
+  };
 
   return (
-    <div className={`flex-1 p-5 overflow-y-auto custom-scrollbar rounded-none backdrop-blur-sm shadow-inner 
-      ${theme === 'dark' 
-        ? 'bg-hiremind-bg-dark/80 border border-slate-700/80' 
-        : 'bg-hiremind-bg-light/80 border border-slate-300/80'}`}>
+    <div 
+      className={`flex-1 p-5 overflow-y-auto custom-scrollbar rounded-none backdrop-blur-sm shadow-inner 
+        ${theme === 'dark' 
+          ? 'bg-slate-900/20 border border-white/5' 
+          : 'bg-hiremind-bg-light/80 border border-slate-300/80'}`}
+      onScroll={handleScroll}
+      ref={messagesContainerRef}
+    >
+      {/* Loading indicator when fetching more messages */}
+      {isLoadingMore && (
+        <div className={`text-center py-4 ${theme === 'dark' ? 'text-slate-400' : 'text-hiremind-text-light-secondary'}`}>
+          <div className="text-sm">Loading earlier messages...</div>
+        </div>
+      )}
+
       {messages.length === 0 ? (
         <div className={`text-center p-10 
-          ${theme === 'dark' ? 'text-hiremind-text-dark-secondary' : 'text-hiremind-text-light-secondary'}`}>
+          ${theme === 'dark' ? 'text-slate-400' : 'text-hiremind-text-light-secondary'}`}>
           <div className="text-5xl mb-4">🤖</div>
           <p className="text-lg">Start by uploading resumes or typing a query!</p>
           <p className="text-sm mt-2 opacity-80">

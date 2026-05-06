@@ -10,9 +10,13 @@ export const ThemeProvider = ({ children }) => {
   });
 
   useEffect(() => {
-    // Ye 'dark' class ko add/remove karega based on theme state
-    document.body.classList.toggle('dark', theme === 'dark');
-    document.body.classList.toggle('light', theme === 'light');
+    const isDark = theme === 'dark';
+
+    // Apply theme classes on both html and body so Tailwind and global CSS stay in sync.
+    document.documentElement.classList.toggle('dark', isDark);
+    document.documentElement.classList.toggle('light', !isDark);
+    document.body.classList.toggle('dark', isDark);
+    document.body.classList.toggle('light', !isDark);
     localStorage.setItem('hiremind-theme', theme);
   }, [theme]);
 
