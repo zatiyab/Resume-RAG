@@ -2,6 +2,7 @@
 import { getUserIdFromToken, isTokenExpired } from '../utils/helpers.js';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+console.log(API_BASE_URL);
 const CACHE_PREFIX = 'hiremind-cache:';
 const CACHE_TTLS = {
   resumes: 60_000,
