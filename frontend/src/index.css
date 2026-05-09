@@ -1,5 +1,6 @@
 /* frontend/src/index.css */
 @import "tailwindcss";
+@config "../tailwind.config.js";
 
 /* Define CSS Variables for your custom theme colors */
 :root {
