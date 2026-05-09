@@ -103,8 +103,6 @@
 
 /* Global base styles */
 * {
-  margin: 0.1;
-  padding: 0.1;
   box-sizing: border-box;
 }
 
