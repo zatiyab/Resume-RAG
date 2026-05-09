@@ -13,6 +13,7 @@ const ResumesDrawer = ({ isOpen, onClose }) => {
   const [processingNotice, setProcessingNotice] = useState(null);
   const [resumes, setResumes] = useState([]);
   const [confirmDialog, setConfirmDialog] = useState(null);
+  const [alert, setAlert] = useState(null);
 
   const drawerClassName = theme === 'dark'
     ? 'fixed right-0 top-0 z-[9998] h-full w-full max-w-md bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border-l border-white/10 text-slate-100 shadow-2xl backdrop-blur-xl'
@@ -48,7 +49,7 @@ const ResumesDrawer = ({ isOpen, onClose }) => {
     if (files.length === 0) return;
 
     setUploadLoading(true);
-    setUploadStatus('Uploading and processing resumes...');
+    setUploadStatus('');
     setProcessingNotice({
       type: 'info',
       text: `Uploading ${files.length} resume(s). Please wait while processing completes.`,
@@ -59,9 +60,12 @@ const ResumesDrawer = ({ isOpen, onClose }) => {
       setUploadStatus(data.message || 'Processing complete.');
       setProcessingNotice({
         type: 'success',
-        text: `Processing complete. ${files.length} resume(s) are ready to use.`,
+        text: `Successfully processed ${files.length} resume(s) and ready to use!`,
       });
-      window.alert(`Processing complete. ${files.length} resume(s) are ready.`);
+      setAlert({
+        title: 'Upload Successful',
+        message: `${files.length} resume${files.length > 1 ? 's' : ''} processed and ready to use!`,
+      });
       await refreshResumes();
     } catch (error) {
       console.error('Resume upload error:', error);
@@ -110,6 +114,8 @@ const ResumesDrawer = ({ isOpen, onClose }) => {
   };
 
   const closeConfirmDialog = () => setConfirmDialog(null);
+
+  const closeAlert = () => setAlert(null);
 
   const handleDelete = (fileName) => {
     openConfirmDialog(
@@ -167,16 +173,43 @@ const ResumesDrawer = ({ isOpen, onClose }) => {
     await action();
   };
 
-  if (!isOpen) return null;
+  return (
+    <>
+      {alert && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 px-4">
+          <div className={`w-full max-w-sm rounded-2xl border p-6 shadow-2xl ${theme === 'dark' ? 'bg-slate-950 border-emerald-500/40 text-slate-100' : 'bg-white border-emerald-200 text-slate-900'}`}>
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+                <svg className="h-6 w-6 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">{alert.title}</h3>
+              </div>
+            </div>
+            <p className={`mt-3 text-sm leading-6 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{alert.message}</p>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={closeAlert}
+                className="px-4 py-2 rounded-xl text-sm font-medium bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:shadow-lg hover:shadow-emerald-500/30 transition-all"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
-  return createPortal(
-    <div className="fixed inset-0 z-[9997]">
-      <button
-        type="button"
-        aria-label="Close resumes drawer"
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      {isOpen && createPortal(
+        <div className="fixed inset-0 z-[9997]">
+          <button
+            type="button"
+            aria-label="Close resumes drawer"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={onClose}
+          />
       <aside className={`${drawerClassName} flex flex-col`}>
         <div className={`flex items-center justify-between px-5 py-4 border-b ${theme === 'dark' ? 'border-white/10' : 'border-slate-200'}`}>
           <div className="flex items-center gap-3">
@@ -311,6 +344,8 @@ const ResumesDrawer = ({ isOpen, onClose }) => {
       </aside>
     </div>,
     document.body
+  )}
+    </>
   );
 };
 

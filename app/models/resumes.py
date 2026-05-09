@@ -1,14 +1,13 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, ForeignKey, Integer, DateTime, Index, VARCHAR
+from sqlalchemy import Column, Integer, DateTime, Index, VARCHAR
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from app.core.database import Base
 
-class ResumesMetadata(Base):
-    __tablename__ = "resumes_metadata"
+class Resume(Base):
+    __tablename__ = "resumes"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     file_path = Column(VARCHAR(255), nullable=False)
     resume_name = Column(VARCHAR(255), nullable=False)
     uploaded_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
@@ -22,6 +21,5 @@ class ResumesMetadata(Base):
     resume_vector_id = Column(Integer, nullable=True)  # ID linking to vector store
 
     __table_args__ = (
-        Index("idx_resumes_metadata_user_id", "user_id"),
-        Index("idx_resumes_metadata_file_path", "file_path")
+        Index("idx_resumes_file_path", "file_path"),
     )

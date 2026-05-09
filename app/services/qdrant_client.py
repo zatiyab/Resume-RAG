@@ -1,26 +1,19 @@
 from qdrant_client.http import models as rest
 from qdrant_client.http.models import Distance, VectorParams, HnswConfigDiff  
-from qdrant_client.models import PointStruct, Filter, FieldCondition, MatchValue
+from qdrant_client.models import HasIdCondition, Filter
 import pdfplumber
-from app.core.config import llm
 import time
+from app.crud.resume_crud import find_resume_id_for_duplicate
 from app.rag_logic.utils import basic_text_normalization
-import datetime
 import io
 from pathlib import Path
 from typing import Any
-from qdrant_client import QdrantClient
-from app.core.config import settings
+import uuid
+from app.clients import (get_qdrant, get_co,get_llm)
 
-client = None
-try:
-    client = QdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY)
-except Exception as e:
-    client = None
-    print(f"Warning: Qdrant client initialization failed: {e}")
-import cohere
-co = cohere.ClientV2()
-
+co = get_co()
+qdrant_client = get_qdrant()
+llm = get_llm()
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RESUMES_DIR = PROJECT_ROOT / "resumes"
 SUPPORTED_RESUME_EXTENSIONS = {".pdf", ".doc", ".docx"}
@@ -62,7 +55,7 @@ def _embed_text(text: str, input_type: str = "search_document") -> list[float]:
 
     raise ValueError("Could not extract float embedding from Cohere response")
 
-def llm_extract_metadata(resume:str,user_id,db,file_path,resume_name,vector_id):
+def llm_extract_metadata(resume:str,db,file_path,resume_name,vector_id):
     EXTRACTION_PROMPT = """
 Extract structured info from this resume. Normalize everything strictly:
 - location: city name only, Title Case (e.g. "Delhi", "Noida", "Bangalore") 
@@ -99,26 +92,41 @@ Resume to extract metadata from:
 """.format(resume=resume)
     try: 
         from app.schemas.resumes_schemas import MetadataResponse
-        from app.crud.resume_crud import add_resume_metadata
+        from app.crud.resume_crud import add_resume
         from app.helpers.norm_location import geocode_city
         
         structured_llm = llm.with_structured_output(MetadataResponse)
         metadata_response = structured_llm.invoke(EXTRACTION_PROMPT)
         
         metadata_content = metadata_response.model_dump() if metadata_response else "{}"
-        state = geocode_city(metadata_content.get("location"))['state'] if metadata_content.get("location") else None   
-        city = geocode_city(metadata_content.get("location"))['city'] if metadata_content.get("location") else None
-        add_resume_metadata(user_id=user_id, file_path=file_path, resume_name=resume_name, skills=metadata_content.get("skills"), experience_years=metadata_content.get("experience_years"), raw_location=metadata_content.get("location"), state=state, city=city, domain=metadata_content.get("domain"), name=metadata_content.get("name"), resume_vector_id=vector_id, db=db)
-        return metadata_content
+        
     except Exception as e:
         print(f"Error occurred while extracting metadata: {e}")
-        return {
+        metadata_content = {
             "name": "",
             "location": "",        
             "skills": [],          
             "experience_years": 0,
             "domain": ""           
         }
+        
+    
+    state = geocode_city(metadata_content.get("location"))['state'] if metadata_content.get("location") else "Unknown"   
+    city = geocode_city(metadata_content.get("location"))['city'] if metadata_content.get("location") else "Unknown"
+    
+    add_resume(file_path=file_path, 
+                resume_name=resume_name, 
+                skills=metadata_content.get("skills"), 
+                experience_years=metadata_content.get("experience_years"), 
+                raw_location=metadata_content.get("location"), 
+                state=state, 
+                city=city, 
+                domain=metadata_content.get("domain"), 
+                name=metadata_content.get("name"), 
+                resume_vector_id=vector_id, 
+                db=db)
+
+    return metadata_content
 
 def llm_summarize_resume(resume:str):
     prompt_text = f'''You are a resume parser for a RAG (Retrieval-Augmented Generation) system.
@@ -199,7 +207,7 @@ RESUME TO PARSE:
     return summarized_resume
 
 
-def add_vectors(user_id=None, files_to_process=None,db=None):
+def add_vectors(user_id=None, files_to_process:list=[],db=None, duplicate_files:list = []) -> dict:
     '''
     Reads resumes from Supabase, extracts text and generates metadata,
     then converts resumes into vectors and saves to the resume collection.
@@ -209,73 +217,46 @@ def add_vectors(user_id=None, files_to_process=None,db=None):
         files_to_process: Optional list of specific file names to process.
                          If provided, skips Supabase fetch and Qdrant duplicate checks.
                          If None, fetches all files from Supabase and filters out existing vectors.
+        duplicate_files: List of file names that are duplicates and should be skipped.
     '''
-    from app.services.resumes_storage import list_user_resumes, download_resume_bytes
+    from app.services.resumes_storage import download_resume_bytes
+    from app.crud.resume_crud import get_cnt_resumes,list_resumes
+    from app.vector_crud.resumes_crud import batch_add_resumes as batch_add_resumes_to_qdrant
+    from app.crud.user_resumes_crud import add_user_resumes,duplicate_resume_check
+    from app.crud.resume_crud import get_resume_id_by_vector_id
+    print('User ID : ', user_id)
     
-    
-    print('User ID = ', user_id)
-    if not user_id:
-        print("No user_id provided to add_vectors. Returning.")
-        return {"error": "user_id required"}
-        
-    
-    # If specific files provided (e.g., from upload), process only those
-    if files_to_process:
-        resumes = files_to_process
-        skipped_existing = 0
-        # Still need to get current vector count for unique point IDs
-        try:
-            count_result = client.count(
-                collection_name='resumes',
-                count_filter=Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))])
-            )
-            user_resumes_vec_cnt = count_result.count
-        except Exception as e:
-            print(f"Error getting vector count for user {user_id}: {e}")
-            user_resumes_vec_cnt = 0
-        print(f'Processing {len(resumes)} newly uploaded files for user {user_id}. Current vector count: {user_resumes_vec_cnt}')
-    else:
-        # Default behavior: fetch all from Supabase and check Qdrant for duplicates
-        try:
-            supabase_files = list_user_resumes(user_id)
-            if not isinstance(supabase_files, list):
-                supabase_files = []
-        except Exception as e:
-            print(f"Error fetching from Supabase: {e}")
-            supabase_files = []
+    resumes_in_db_qdrant = [resume.resume_name for resume in list_resumes(db)]
+    resume_vector_id = get_cnt_resumes(db)  # Start vector IDs from the current count of resumes in DB to avoid collisions
+    print('Last Vector Id for user ', user_id, ': ', resume_vector_id, flush=True)
+    print('Existing Vectors for user ', user_id, ': ', resumes_in_db_qdrant, flush=True)
 
-        resumes = [f["name"] for f in supabase_files if f.get("name") and f["name"].lower().endswith(".pdf")]
-        total_pdf_files = len(resumes)
-        
-        # Try filtering Qdrant for this user to avoid redundant processing
-        try:
-            all_vec_user = client.scroll(
-                collection_name='resumes',
-                scroll_filter=Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]),
-                with_payload=['source'],
-                limit=1000000
-            )
-            files_vector = [i.payload['source'] for i in all_vec_user[0]] if all_vec_user and all_vec_user[0] else []
-        except Exception as e:
-            print(f"Error checking existing vectors in Qdrant: {e}")
-            files_vector = []
-            
-        
-        user_resumes_vec_cnt = len(files_vector)
-        print('Last Vector Index for user ', user_id, ': ', user_resumes_vec_cnt, flush=True)
-        print('Existing Vectors for user ', user_id, ': ', files_vector)
+    print('Total No. of new resumes: ', len(files_to_process))
+    print('Duplicate files to skip: ', duplicate_files)
+    print('Files to process(not duplicates): ', files_to_process)
 
-        resumes = [i for i in resumes if i not in files_vector]
-        skipped_existing = total_pdf_files - len(resumes)
-        print('Total No. of new resumes: ', len(resumes))
-    
+    user_uuid = uuid.UUID(user_id) if isinstance(user_id, str) else user_id
+
     points = []
     resumes_data_dict = {}
-    BATCH_SIZE = 10
 
-    for resume in resumes:
+    
+    for duplicate in duplicate_files:
+        if duplicate_resume_check(duplicate,user_id, db):
+            print(f"Duplicate file '{duplicate}' not found in DB during duplicate check. This should not happen. Skipping.")
+            continue
+        resume_id = find_resume_id_for_duplicate(duplicate, db) 
+        if resume_id is None:
+            print(f"Could not find resume_id for duplicate file: {duplicate}")
+            continue
+        print(f"Skipping duplicate file from processing: {duplicate}")
+        resume_uuid = uuid.UUID(str(resume_id))
+        add_user_resumes(user_id=user_uuid, resume_id=resume_uuid, db=db)
+        
+    
+    for resume in files_to_process:
         resume_data = ''
-        file_path = f"{user_id}/{resume}"
+        file_path = resume
         try:
             pdf_bytes = download_resume_bytes(file_path)
             with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
@@ -299,65 +280,61 @@ def add_vectors(user_id=None, files_to_process=None,db=None):
         except Exception as e:
             print(f"Failed to process {resume} from Supabase: {e}")
    
-    batch_operations_info = []
+
+    resume_vector_ids = []
+    
     for resume, resume_data in resumes_data_dict.items():
-        print(f'At {user_resumes_vec_cnt}/{len(resumes_data_dict)}, {resume}') 
-        user_resumes_vec_cnt+=1
+        print(f'At {resume_vector_id}/{len(resumes_data_dict)}, {resume}') 
+        
+
         resume_data= basic_text_normalization(resume_data)
         resume_data = llm_summarize_resume(resume_data)
-        resume_metadata = llm_extract_metadata(resume_data, user_id=user_id, db=db, file_path=f"{user_id}/{resume}", resume_name=resume,vector_id=user_resumes_vec_cnt)
-        print(f"Metadata for {resume}: {resume_metadata}")
-        # Use search_document input type for resume embeddings (better for retrieval)
-        vector = _embed_text(resume_data, input_type="search_document")
-    
-        metadata_dict = {'source': resume, 'page_content': resume_data,'user_id': user_id}  
+        resume_metadata = llm_extract_metadata(resume_data, 
+                                               db=db, 
+                                               file_path=resume, 
+                                               resume_name=resume,
+                                               vector_id=resume_vector_id)
         
-        points.append(PointStruct(id=user_resumes_vec_cnt, vector=vector, payload=metadata_dict))
+        try:
+            resume_id = get_resume_id_by_vector_id(resume_vector_id, db)
+        except Exception as e:
+            print(f"Error occurred while fetching resume ID for vector ID {resume_vector_id}: {e}")
+            continue
+        add_user_resumes(user_id=user_uuid, resume_id=uuid.UUID(str(resume_id)), db=db)
+    
 
-    if points:
-        num_batches = (len(points) + BATCH_SIZE - 1) // BATCH_SIZE
-        print(f"Upserting in batches of {BATCH_SIZE}. Total batches: {num_batches}")
-        for batch_start in range(0, len(points), BATCH_SIZE):
-            batch_points = points[batch_start:batch_start + BATCH_SIZE]
-            operation_info = client.upsert(
-                collection_name="resumes",
-                wait=True,
-                points=batch_points
-            )
-            print(operation_info)
-            batch_operations_info.append(operation_info)
+        print(f"Metadata for {resume}: {resume_metadata}")
+        
+        resume_vector_ids.append(resume_vector_id)
+        resume_vector_id+=1
+        
+    
+    batch_operations_info = batch_add_resumes_to_qdrant(
+        resume_names=list(resumes_data_dict.keys()),
+        resume_texts=list(resumes_data_dict.values()),
+        resume_vector_ids=resume_vector_ids,
+        )
 
     return {
         "processed_files": len(resumes_data_dict),
         "inserted_points": len(points),
-        "skipped_existing": skipped_existing,
+        "duplicate_files": duplicate_files,
         "operation": batch_operations_info ,
     }
 
 
-def add_history(history_text: str, hist_id, user_id):
-    '''
-    Get history for the LLM chatbot and converts it into a vector
-    and also add it to the vector history db and prints the result of the upsert operation
-    '''
-    import uuid
-    if not hist_id:
-        hist_id = str(uuid.uuid4())
-
-    vector = _embed_text(history_text.lower())
-    point = PointStruct(id=hist_id, vector=vector, payload={"created_at": datetime.datetime.utcnow().isoformat(),
-                       'history':history_text,
-                       'user_id':user_id})
-    operation_info = client.upsert(
-            collection_name="history",
-            wait=True,
-            points=[point]
-        )
-
-    print(f"--- DEBUG: History Added: {operation_info} ---")
 
 
-def get_hybrid_history(user_query: str, user_id: str, db, chat_group_id: str | None = None, k_recent: int = 2, k_similar: int = 2):
+
+def get_hybrid_history(
+    user_query: str,
+    user_id: str,
+    db,
+    chat_group_id: str | None = None,
+    k_recent: int = 2,
+    k_similar: int = 2,
+    use_vector_similarity: bool = False,
+):
     """
     Retrieve hybrid history combining:
     1. Recent context (last K entries) for pronoun resolution
@@ -374,6 +351,7 @@ def get_hybrid_history(user_query: str, user_id: str, db, chat_group_id: str | N
         Combined history string with recent and related context
     """
     from app.crud.chat_crud import get_last_k_history
+    from app.vector_crud.history_crud import get_similar_history
     
     print(f"--- DEBUG: Building hybrid history for user {user_id}, query: '{user_query}' ---")
     
@@ -382,36 +360,21 @@ def get_hybrid_history(user_query: str, user_id: str, db, chat_group_id: str | N
         # Pass chat_group_id so recent history is restricted to the same chat group
         recent_histories = get_last_k_history(user_id, chat_group_id, db, k=k_recent)
         recent_text = "\n---\n".join(recent_histories)
+
         print(f"--- DEBUG: Retrieved {len(recent_histories)} recent history entries ---")
     except Exception as e:
         print(f"--- WARNING: Failed to get recent history: {e} ---")
         recent_text = ""
     
     # Step 2: Get vector-similar history
+    # This is opt-in because semantic lookup can be slow enough to hurt page reads.
     similar_text = ""
     try:
-        if int(k_similar) <= 0:
+        if not use_vector_similarity or int(k_similar) <= 0:
             print("--- DEBUG: Skipping vector-similar history retrieval because k_similar <= 0 ---")
         else:
             safe_k_similar = max(1, int(k_similar))
-            query_embedding = _embed_text(user_query.lower(), input_type="search_query")
-
-            similar_results = client.query_points(
-                collection_name="history",
-                query=query_embedding,
-                limit=safe_k_similar,
-                query_filter=Filter(
-                    must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]
-                ),
-                score_threshold=0.4
-            )
-
-            similar_histories = [
-                result.payload.get('history', '')
-                for result in similar_results.points
-                if result.payload
-            ]
-
+            similar_histories = get_similar_history(user_id, chat_group_id, user_query, k=safe_k_similar)
             similar_text = "\n---\n".join(similar_histories)
             print(f"--- DEBUG: Retrieved {len(similar_histories)} vector-similar history entries ---")
     except Exception as e:
@@ -436,7 +399,7 @@ def get_hybrid_history(user_query: str, user_id: str, db, chat_group_id: str | N
     print(f"--- DEBUG: Combined history length: {len(combined)} characters ---")
     return combined
 
-def get_relevant_docs(user_query,user_id,collection,k=5):
+def get_relevant_docs(user_query,user_id,k=5,vector_ids=[]):
     '''
     Input parameters:
     user_query -> The main query that the user gives (can be a transformed JD)
@@ -450,26 +413,25 @@ def get_relevant_docs(user_query,user_id,collection,k=5):
 
     print(f"\n--- DEBUG: Inside get_relevant_docs for query: '{user_query}' ---")
     print(f"--- DEBUG: User ID: {user_id} ---")
-    print(f"--- DEBUG: Collection: {collection} ---")
 
     # Check if collection exists
-    if not client.collection_exists(collection):
-        print(f"--- ERROR: Collection '{collection}' does not exist in Qdrant ---")
+    if not qdrant_client.collection_exists("resumes"):
+        print(f"--- ERROR: Collection 'resumes' does not exist in Qdrant ---")
         return "", []
 
     # Check if there are ANY resumes for this user
+    must_conditions = []
+    if vector_ids:
+        must_conditions.append(HasIdCondition(has_id=vector_ids))
+
     try:
-        user_resumes_count = client.count(
-            collection_name=collection,
+        user_resumes_count = qdrant_client.count(
+            collection_name="resumes",
             count_filter=Filter(
-                must=[
-                    FieldCondition(
-                        key="user_id",
-                        match=MatchValue(value=user_id)
-                    )
-                ]
+                must=must_conditions
             )
         )
+
         print(f"--- DEBUG: Total resumes for user {user_id}: {user_resumes_count.count} ---")
         if user_resumes_count.count == 0:
             print(f"--- ERROR: No resumes found in Qdrant for user {user_id}. Upload resumes first. ---")
@@ -479,34 +441,35 @@ def get_relevant_docs(user_query,user_id,collection,k=5):
 
     print(f"--- DEBUG: Encoding query for retrieval: '{user_query}' ---")
     
-    try:
-        # Use search_query input type for better alignment with search_document embeddings
-        query_embedding = _embed_text(user_query.lower(), input_type="search_query")
-        print(f"--- DEBUG: Query embedding generated successfully, vector size: {len(query_embedding)} ---")
-    except Exception as e:
-        print(f"--- ERROR: Failed to embed query: {e} ---")
-        return "", []
+    
     
     try:
-        search_result = client.query_points(
-            collection_name=collection,
-            query=query_embedding,
-            limit=int(min(k * 2, 50)),  # Retrieve 2x K for reranking, max 50
-            query_filter=Filter(
-                must=[
-                    FieldCondition(
-                        key="user_id",
-                        match=MatchValue(value=user_id)
-                    )
-                ]
-            ),
-            score_threshold=0.0  # Remove threshold initially to see all results
-        )
+        from app.vector_crud.resumes_crud import get_similar_resumes
+        similar_resumes = get_similar_resumes(user_query, user_id, must_conditions, k=k)
     except Exception as e:
         print(f"--- ERROR: Qdrant query_points failed: {e} ---")
         return "", []
-    
-    results = search_result.model_dump()
+
+    # Normalize retrieval result to a dict with a `points` list.
+    if hasattr(similar_resumes, "model_dump"):
+        results = similar_resumes.model_dump()
+    elif hasattr(similar_resumes, "points"):
+        results = {
+            "points": [
+                {
+                    "id": point.id,
+                    "score": getattr(point, "score", 0.0),
+                    "payload": point.payload or {},
+                }
+                for point in (similar_resumes.points or [])
+            ]
+        }
+    elif isinstance(similar_resumes, list):
+        results = {"points": similar_resumes}
+    else:
+        results = {"points": []}
+
+    print(f"--- DEBUG: Retrieved {len(results['points'])} similar resumes from Qdrant ---")
     print(f"--- DEBUG: Qdrant Search Result (points count): {len(results['points'])} ---")
     
     if results['points']:
@@ -560,7 +523,7 @@ def get_relevant_docs(user_query,user_id,collection,k=5):
         print(f'--- DEBUG: Reranked Resume {cnt_resume}: {source}, Score: {score:.3f} ---')
         
         # Pass full resume but cap total context size
-        data = f"Resume-{cnt_resume} ({source})\n\n{page_content[:2000]}"  # Limit to 2000 chars per resume
+        data = f"Resume-{cnt_resume} ({source})\n\n{page_content}"  # Limit to 2000 chars per resume
         all_docs_data += data + "\n\n---\n\n"
         cnt_resume += 1
 
@@ -573,12 +536,12 @@ def get_relevant_docs(user_query,user_id,collection,k=5):
 def initialize_app_data():
     print("--- Initializing collections and data... ---")
 
-    if client is None:
-        raise RuntimeError("Qdrant client is not initialized. Check QDRANT_URL, QDRANT_API_KEY and network connectivity.")
+    if qdrant_client is None:
+        raise RuntimeError("Qdrant qdrant_client is not initialized. Check QDRANT_URL, QDRANT_API_KEY and network connectivity.")
 
-    if not client.collection_exists("resumes"):
+    if not qdrant_client.collection_exists("resumes"):
         print("--- Creating 'resumes' collection ---")
-        client.create_collection(
+        qdrant_client.create_collection(
             collection_name="resumes",
             vectors_config=VectorParams(
                 size=1536,
@@ -588,36 +551,21 @@ def initialize_app_data():
             )
         )
         
-        client.create_payload_index(collection_name="resumes", field_name='source', field_schema=rest.PayloadSchemaType.KEYWORD)
-        client.create_payload_index(collection_name="resumes", field_name='user_id', field_schema=rest.PayloadSchemaType.KEYWORD)
-    
+        qdrant_client.create_payload_index(collection_name="resumes", field_name='source', field_schema=rest.PayloadSchemaType.KEYWORD)
+        
     # Initialize 'history' collection
-    if not client.collection_exists("history"):
+    if not qdrant_client.collection_exists("history"):
         print("--- Creating 'history' collection ---")
-        client.create_collection(
+        qdrant_client.create_collection(
             collection_name="history",
             vectors_config=VectorParams(size=1536, distance=Distance.COSINE, on_disk=False)
         )
         # Create payload index for user_id so filters/deletes by user_id are supported
         try:
-            client.create_payload_index(collection_name="history", field_name="user_id", field_schema=rest.PayloadSchemaType.KEYWORD)
-            print("Created payload index 'user_id' on 'history' collection")
+            qdrant_client.create_payload_index(collection_name="history", field_name="user_id", field_schema=rest.PayloadSchemaType.KEYWORD)
+            qdrant_client.create_payload_index(collection_name="history", field_name="chat_group_id", field_schema=rest.PayloadSchemaType.KEYWORD)
+            print("Created payload index 'user_id' and 'chat_group_id' on 'history' collection")
         except Exception as e:
-            print(f"Warning: failed to create payload index for history.user_id: {e}")
+            print(f"Warning: failed to create payload index for history.user_id and/or history.chat_group_id: {e}")
     print("--- Initial app data setup complete. ---")
 
-def remove_resume_from_qdrant(user_id, file_name):
-    try:
-        delete_filter = Filter(
-            must=[
-                FieldCondition(key="user_id", match=MatchValue(value=user_id)),
-                FieldCondition(key="source", match=MatchValue(value=file_name))
-            ]
-        )
-        delete_result = client.delete(
-            collection_name="resumes",
-            points_selector=delete_filter
-        )
-        print(f"Deleted resume '{file_name}' for user '{user_id}' from Qdrant: {delete_result}")
-    except Exception as e:
-        print(f"Error deleting resume '{file_name}' for user '{user_id}' from Qdrant: {e}")

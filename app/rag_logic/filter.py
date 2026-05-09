@@ -1,282 +1,206 @@
-from app.core.config import llm
+from langchain_core.messages import HumanMessage
+from sqlalchemy import text
+from pydantic.config import ConfigDict
 
-def create_filter(user_query):
+# ── DB helpers ──────────────────────────────────────────────────────────────
 
-    PROMPT = """You are an expert query understanding system for a Resume RAG platform.
 
-Your task is to analyze a recruiter query and generate structured SQL filter conditions for candidate metadata retrieval.
+def get_valid_filter_values(db, user_id: str) -> dict:
+    # skills and domain are PG arrays — need unnest() to get distinct values
+    # Join resumes with user_resumes to filter by user_id
+    return {
+        "domains": [r[0] for r in db.execute(
+            text("""
+                SELECT DISTINCT unnest(r.domain) 
+                FROM resumes r
+                INNER JOIN user_resumes ur ON r.id = ur.resume_id
+                WHERE ur.user_id = :user_id 
+                AND r.domain IS NOT NULL
+            """),
+            {"user_id": user_id}
+        ).fetchall()],
 
-The candidate metadata table contains these columns:
+        "skills": [r[0] for r in db.execute(
+            text("""
+                SELECT DISTINCT unnest(r.skills) 
+                FROM resumes r
+                INNER JOIN user_resumes ur ON r.id = ur.resume_id
+                WHERE ur.user_id = :user_id 
+                AND r.skills IS NOT NULL
+            """),
+            {"user_id": user_id}
+        ).fetchall()],
 
-- skills (varchar[])
-- experience_years (integer)
-- domain (varchar[])
-- name (varchar)
-- city (varchar)
-- state (varchar)
+        "cities": [r[0] for r in db.execute(
+            text("""
+                SELECT DISTINCT r.city 
+                FROM resumes r
+                INNER JOIN user_resumes ur ON r.id = ur.resume_id
+                WHERE ur.user_id = :user_id 
+                AND r.city IS NOT NULL
+            """),
+            {"user_id": user_id}
+        ).fetchall()],
 
-Your job:
-1. Extract filtering constraints from the recruiter query
-2. Convert them into structured SQL-compatible filters
-3. Do NOT generate full SQL queries
-4. Only return valid JSON
-5. Do NOT hallucinate fields not present in schema
-6. Infer recruiter intent carefully
-7. Handle partial/implicit experience requirements
-8. Use ONLY canonical skill names
-9. If a filter is not mentioned, omit it
-10. Support fuzzy recruiter language
+        "states": [r[0] for r in db.execute(
+            text("""
+                SELECT DISTINCT r.state 
+                FROM resumes r
+                INNER JOIN user_resumes ur ON r.id = ur.resume_id
+                WHERE ur.user_id = :user_id 
+                AND r.state IS NOT NULL
+            """),
+            {"user_id": user_id}
+        ).fetchall()],
 
-CANONICAL SKILL NAMES (STRICT):
-Use ONLY these exact forms:
+        "experience": db.execute(
+            text("""
+                SELECT MIN(r.experience_years), MAX(r.experience_years) 
+                FROM resumes r
+                INNER JOIN user_resumes ur ON r.id = ur.resume_id
+                WHERE ur.user_id = :user_id
+            """),
+            {"user_id": user_id}
+        ).fetchone()
+    }
 
-- JavaScript
-- Python
-- TypeScript
-- React
-- Node.js
-- PHP
-- Java
-- C++
+# ── Dynamic tool factory ─────────────────────────────────────────────────────
+# Rebuild the tool every query so enums always reflect current DB state
 
-Never output aliases or variations such as:
-- JS
-- js
-- NodeJS
-- node
-- Py
-- Javascript
 
-Normalize recruiter input into the canonical forms above.
 
-IMPORTANT RULES:
 
-- "python developer" → skills includes "Python"
-- "react js developer" → skills includes "React"
-- "node developer" → skills includes "Node.js"
-- "js developer" → skills includes "JavaScript"
-- "backend engineer" may map to domain includes "backend"
-- "AI engineer" may map to domain includes "ai"
-- "3+ years" → experience_years_gte = 3
-- "less than 5 years" → experience_years_lt = 5
-- "senior" usually means experience_years_gte = 5
-- "junior" usually means experience_years_lt = 3
-- "mid-level" usually means experience_years_between = [3,5]
-- If recruiter mentions city/state, extract them separately
-- If recruiter asks for a specific candidate name, use name
-- Multiple skills should be treated as AND unless explicitly stated otherwise
-- Return clean structured JSON only
-- Never explain reasoning
-- Never output non-canonical skill names
+def make_filter_tool(valid: dict):
+    from pydantic import BaseModel, Field
+    from typing import List, Optional
 
-OUTPUT FORMAT:
+    class CandidateFilter(BaseModel):
+        model_config = ConfigDict(populate_by_name=True)
+        
+        domains:        List[str] = Field(..., description=f"Only pick from: {valid['domains']}")
+        skills:         List[str] = Field(..., description=f"Only pick from: {valid['skills']}")
+        cities:         List[str] = Field(..., description=f"Only pick from: {valid['cities']}")
+        states:         List[str] = Field(..., description=f"Only pick from: {valid['states']}")
+        experience_min: Optional[int] = Field(default=None, description="Minimum years of experience")
+        experience_max: Optional[int] = Field(default=None, description="Maximum years of experience")
+    return CandidateFilter
 
-{
-  "skills_all": [],
-  "skills_any": [],
-  "domains": [],
-  "experience_years_gte": null,
-  "experience_years_lte": null,
-  "experience_years_lt": null,
-  "experience_years_gt": null,
-  "experience_years_between": [],
-  "city": null,
-  "state": null,
-  "name": null
-}
+# ── Validation ───────────────────────────────────────────────────────────────
 
-EXAMPLES:
+def validate_filters(raw_filters: dict, valid: dict) -> dict:
+    valid_domains = set(valid["domains"])
+    valid_skills  = set(valid["skills"])
+    valid_cities  = set(valid["cities"])
+    valid_states  = set(valid["states"])
 
-Recruiter Query:
-"Need python developers with react js and 3+ years experience in Bangalore"
+    return {
+        # filter_applied is ignored — it was only there to satisfy Cohere
+        "domains":        [d for d in (raw_filters.get("domains")  or []) if d in valid_domains],
+        "skills":         [s for s in (raw_filters.get("skills")   or []) if s in valid_skills],
+        "cities":         [c for c in (raw_filters.get("cities")   or []) if c in valid_cities],
+        "states":         [s for s in (raw_filters.get("states")   or []) if s in valid_states],
+        "experience_min": raw_filters.get("experience_min"),
+        "experience_max": raw_filters.get("experience_max"),
+    }
 
-Output:
-{
-  "skills_all": ["Python", "React"],
-  "skills_any": [],
-  "domains": [],
-  "experience_years_gte": 3,
-  "city": "bangalore",
-  "state": null,
-  "name": null
-}
+# ── SQL builder ──────────────────────────────────────────────────────────────
 
-Recruiter Query:
-"Looking for frontend or node developers in Delhi"
 
-Output:
-{
-  "skills_all": [],
-  "skills_any": ["Node.js"],
-  "domains": ["frontend"],
-  "city": "delhi",
-  "state": null,
-  "name": null
-}
 
-Recruiter Query:
-"Junior java developers from Maharashtra"
 
-Output:
-{
-  "skills_all": ["Java"],
-  "skills_any": [],
-  "domains": [],
-  "experience_years_lt": 3,
-  "state": "maharashtra"
-}
 
-Recruiter Query:
-"Need js and typescript engineers"
+def build_sql(filters: dict, user_id: str) -> tuple:
+    # Start with user_resumes join to filter by user
+    conditions = ["ur.user_id = :user_id"]
+    params     = {"user_id": user_id}
 
-Output:
-{
-  "skills_all": ["JavaScript", "TypeScript"],
-  "skills_any": [],
-  "domains": [],
-  "city": null,
-  "state": null,
-  "name": null
-}
+    # Fix — cast Python list to PG array explicitly using ANY()
+    if filters.get("domains"):
+        # Expand list into named params for text() compatibility
+        domain_params = {f"domain_{i}": v for i, v in enumerate(filters["domains"])}
+        placeholders  = ",".join(f":domain_{i}" for i in range(len(filters["domains"])))
+        conditions.append(f"r.domain && ARRAY[{placeholders}]::varchar[]")
+        params.update(domain_params)
 
-Now analyze the recruiter query and generate the JSON filters.
+    if filters.get("skills"):
+        skill_params = {f"skill_{i}": v for i, v in enumerate(filters["skills"])}
+        placeholders = ",".join(f":skill_{i}" for i in range(len(filters["skills"])))
+        conditions.append(f"r.skills && ARRAY[{placeholders}]::varchar[]")
+        params.update(skill_params)
 
-Recruiter Query:
-{user_query}
-"""
-    prompt = PROMPT.replace("{user_query}", user_query)
-    response = llm.invoke(prompt)
-    response_content = response.content.strip()
+    if filters.get("cities"):
+        city_params  = {f"city_{i}": v for i, v in enumerate(filters["cities"])}
+        placeholders = ",".join(f":city_{i}" for i in range(len(filters["cities"])))
+        conditions.append(f"r.city IN ({placeholders})")
+        params.update(city_params)
+
+    if filters.get("states"):
+        state_params = {f"state_{i}": v for i, v in enumerate(filters["states"])}
+        placeholders = ",".join(f":state_{i}" for i in range(len(filters["states"])))
+        conditions.append(f"r.state IN ({placeholders})")
+        params.update(state_params)
+
+    if filters.get("experience_min") is not None:
+        conditions.append("r.experience_years >= :exp_min")
+        params["exp_min"] = filters["experience_min"]
+
+    if filters.get("experience_max") is not None:
+        conditions.append("r.experience_years <= :exp_max")
+        params["exp_max"] = filters["experience_max"]
+
+    where = "WHERE " + " AND ".join(conditions)
+    sql   = text(f"""
+        SELECT 
+            r.*
+        FROM resumes r
+        INNER JOIN user_resumes ur ON r.id = ur.resume_id
+        {where}
+    """)
+
+    return sql, params
+
+
+# ── Main retrieval function ──────────────────────────────────────────────────
+
+def retrieve_candidates(query: str, db, user_id: str) -> list:
+
+    # 1. Fetch valid values fresh from DB
+    valid = get_valid_filter_values(db, user_id)
+
+    # 2. Early return if user has no resumes yet
+    if not any([valid["domains"], valid["skills"], valid["cities"], valid["states"]]):
+        return []
+
+    # 3. Bind the dynamic schema as structured output
+
+    from app.clients import get_llm
+    llm = get_llm()
+    CandidateFilter = make_filter_tool(valid)
+    structured_llm  = llm.with_structured_output(CandidateFilter)
+
+    # 4. Run
+    raw = structured_llm.invoke([
+        HumanMessage(content=f"""
+Extract recruitment filters from this query.
+Only use values explicitly listed in each field's description.
+If no match exists, leave the field as an empty list.
+
+Query: {query}
+        """)
+    ])
+
+    # 5. Validate
+    filters = validate_filters(raw.model_dump(), valid)
+
+    # 6. Build and run SQL
+    sql, params = build_sql(filters, user_id)
+    print(f"Constructed SQL: {sql}")
+    print(f"SQL Parameters: {params}")
     try:
-        import json
-        filters = json.loads(response_content)
-        return filters
-    except json.JSONDecodeError:
-        print("Failed to parse JSON response:")
-        print(response_content)
-        return None
-    
-
-
-
-
-
-from sqlalchemy import  and_, func
-
-
-from app.models.resumes import ResumesMetadata
-
-
-
-def apply_resume_filters(query, filters: dict):
-    conditions = []
-
-    def _normalize_scalar_filter(value):
-        if isinstance(value, list):
-            for item in value:
-                if isinstance(item, str) and item.strip():
-                    return item.strip()
-            return None
-
-        if isinstance(value, str):
-            cleaned = value.strip()
-            return cleaned or None
-
-        return value
-
-    # -------------------------
-    # Skills (ALL)
-    # PostgreSQL array contains
-    # -------------------------
-    skills_all = filters.get("skills_all")
-    if skills_all:
-        conditions.append(
-            ResumesMetadata.skills.contains(skills_all)
-        )
-
-    # -------------------------
-    # Skills (ANY)
-    # PostgreSQL overlap operator
-    # -------------------------
-    skills_any = filters.get("skills_any")
-    if skills_any:
-        conditions.append(
-            ResumesMetadata.skills.overlap(skills_any)
-        )
-
-    # -------------------------
-    # Domains
-    # -------------------------
-    domains = filters.get("domains")
-    if domains:
-        conditions.append(
-            ResumesMetadata.domain.overlap(domains)
-        )
-
-    # -------------------------
-    # Experience filters
-    # -------------------------
-    if filters.get("experience_years_gte") is not None:
-        conditions.append(
-            ResumesMetadata.experience_years >= filters["experience_years_gte"]
-        )
-
-    if filters.get("experience_years_lte") is not None:
-        conditions.append(
-            ResumesMetadata.experience_years <= filters["experience_years_lte"]
-        )
-
-    if filters.get("experience_years_gt") is not None:
-        conditions.append(
-            ResumesMetadata.experience_years > filters["experience_years_gt"]
-        )
-
-    if filters.get("experience_years_lt") is not None:
-        conditions.append(
-            ResumesMetadata.experience_years < filters["experience_years_lt"]
-        )
-
-    experience_between = filters.get("experience_years_between")
-    if experience_between and len(experience_between) == 2:
-        conditions.append(
-            ResumesMetadata.experience_years.between(
-                experience_between[0],
-                experience_between[1]
-            )
-        )
-
-    # -------------------------
-    # City
-    # -------------------------
-    city = _normalize_scalar_filter(filters.get("city"))
-    if city:
-        conditions.append(
-            func.lower(ResumesMetadata.city) == city.lower()
-        )
-
-    # -------------------------
-    # State
-    # -------------------------
-    state = _normalize_scalar_filter(filters.get("state"))
-    if state:
-        conditions.append(
-            func.lower(ResumesMetadata.state) == state.lower()
-        )
-
-    # -------------------------
-    # Name
-    # -------------------------
-    name = _normalize_scalar_filter(filters.get("name"))
-    if name:
-        conditions.append(
-            ResumesMetadata.name.ilike(f"%{name}%")
-        )
-
-    # -------------------------
-    # Apply conditions
-    # -------------------------
-    if conditions:
-        query = query.where(and_(*conditions))
-
-    return query
-
+        results = db.execute(sql, params).fetchall()
+        return [dict(r._mapping) for r in results]
+    except Exception as e:
+        # Log the exact SQL for debugging
+        print(f"SQL error: {e}")
+        print(f"Filters applied: {filters}")
+        raise

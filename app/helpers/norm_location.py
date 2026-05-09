@@ -15,9 +15,16 @@ def geocode_city(city: str) -> dict:
             return {"city": city, "state": None, "source": "geocode_miss"}
         
         addr = location.raw["address"]
+        addr_city = addr.get("city") or addr.get("town") or addr.get("village") or city
+        addr_state = addr.get("state")
+        if addr_city == "New Delhi" and not addr_state:
+            addr_city = "Delhi"
+            addr_state = "Delhi"
+        elif addr_city == "Delhi" and not addr_state:
+            addr_state = "Delhi"
         return {
-            "city":     addr.get("city") or addr.get("town") or city,
-            "state":    addr.get("state"),
+            "city":     addr_city,
+            "state":    addr_state,
             "country":  addr.get("country_code", "").upper(),
             "source":   "geocode"
         }
@@ -25,13 +32,3 @@ def geocode_city(city: str) -> dict:
         return {"city": city, "state": None, "source": "geocode_error"}
 
 
-# Examples
-# print(geocode_city("Dehradun"))     # → {city: "Chennai", state: "Tamil Nadu", ...}
-# print(geocode_city("Chattarpur"))     # → {city: "Noida",   state: "Uttar Pradesh", ...}
-# print(geocode_city("Trivandrum")) # → {city: "Thiruvananthapuram", state: "Kerala", ...}
-# print(geocode_city("Vizag")) # → {city: "Visakhapatnam",      state: "Andhra Pradesh", ...}
-
-# print(geocode_city("Asansol")) # → {city: "UnknownCity", state: None, source: "geocode_miss"}
-
-# print(geocode_city("Hajipur"))
-# print(geocode_city("Mira Bhayander")) 

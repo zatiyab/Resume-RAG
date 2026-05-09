@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.crud.chat_crud import get_chat_history, get_chat_groups, delete_chat_group
+from app.crud.chat_crud import get_chat_history, get_chat_groups, delete_chat_group as delete_chat_group_from_db
 
 from app.schemas.req_models import ChatPost
 
@@ -15,15 +15,6 @@ from app.api.dependencies import get_current_user_id, get_db_with_retry
 router = APIRouter()
 
 
-@router.post("/chat")
-async def post_chat(request: ChatPost, db: Session = Depends(get_db_with_retry), current_user_id: str = Depends(get_current_user_id)):
-    # Verify the user_id in the request matches the authenticated user
-    if str(request.user_id) != current_user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User ID mismatch. Cannot access chat for another user."
-        )
-    return await post_chat_messages(request, db)
 
 @router.get("/chat/history/{user_id}")
 async def get_chat_history_endpoint(user_id: str, limit: int = 5, offset: int = 0, chat_group_id: str | None = None, db: Session = Depends(get_db_with_retry), current_user_id: str = Depends(get_current_user_id)):
@@ -92,6 +83,21 @@ async def get_chat_groups_endpoint(user_id: str, db: Session = Depends(get_db_wi
         raise HTTPException(status_code=500, detail="Error retrieving chat groups")
 
 
+
+
+
+@router.post("/chat")
+async def post_chat(request: ChatPost, db: Session = Depends(get_db_with_retry), current_user_id: str = Depends(get_current_user_id)):
+    # Verify the user_id in the request matches the authenticated user
+    if str(request.user_id) != current_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User ID mismatch. Cannot access chat for another user."
+        )
+    return await post_chat_messages(request, db)
+
+
+
 @router.delete("/chat/groups/{user_id}/{chat_group_id}")
 async def delete_chat_group_endpoint(
     user_id: str,
@@ -114,7 +120,11 @@ async def delete_chat_group_endpoint(
         raise HTTPException(status_code=400, detail="Invalid user_id or chat_group_id format")
 
     try:
-        return delete_chat_group(user_uuid, group_uuid, db=db)
+        from app.vector_crud.history_crud import delete_history_by_chat_group_id as delete_history_by_chat_group_id_from_qdrant
+        # Delete from Qdrant vector store
+        delete_history_by_chat_group_id_from_qdrant(user_uuid, group_uuid)
+        # Delete from SQL database
+        return delete_chat_group_from_db(user_uuid, group_uuid, db=db)
     except Exception as e:
         print(f"Error deleting chat group {chat_group_id} for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail="Error deleting chat group")

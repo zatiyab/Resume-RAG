@@ -1,7 +1,8 @@
 from sqlalchemy import func
 
 from app.models.chat_tables import Chat, History
-from app.models.resumes import ResumesMetadata
+from app.models.resumes import Resume
+from app.models.user_resumes import UserResume
 
 
 def get_chat_groups(user_id, db):
@@ -83,11 +84,11 @@ def get_chat_groups(user_id, db):
 
     return grouped_sessions
 
-def add_history(user_id,history,db,chat_group_id,hist_id=None):
+def add_history(user_id,history,db,chat_group_id,hist_id=None,summarized_history=None):
     if hist_id:
-        history_record = History(user_id=user_id, history=history, hist_id=hist_id, chat_group_id=chat_group_id)
+        history_record = History(user_id=user_id, history=history, hist_id=hist_id, chat_group_id=chat_group_id, summarized_history=summarized_history)
     else:
-        history_record = History(user_id=user_id, history=history, chat_group_id=chat_group_id)
+        history_record = History(user_id=user_id, history=history, chat_group_id=chat_group_id, summarized_history=summarized_history)
     
     db.add(history_record)
     db.commit()
@@ -191,8 +192,22 @@ def delete_chat_history(user_id, db):
     db.commit()
     return {"message": "Chat history deleted successfully."}
 
+def delete_chat_group_history(user_id, chat_group_id, db):
+    """
+    Delete all chat history entries for a specific chat group.
+    Args:
+        user_id: User's UUID
+        chat_group_id: Chat group UUID
+        db: Database session
+    Returns:
+        Dict with deletion status
+    """
+    
+    deleted_count = db.query(History).filter(History.user_id == user_id, History.chat_group_id == chat_group_id).delete()
+    db.commit()
+    return {"message": f"Chat group {chat_group_id} history deleted successfully.", "deleted_entries": deleted_count}
 
-def delete_chat_group(user_id, chat_group_id, db):
+def delete_chat_group_chat(user_id, chat_group_id, db):
     """
     Delete a single chat group and all of its messages for a user.
 
@@ -215,4 +230,24 @@ def delete_chat_group(user_id, chat_group_id, db):
         "message": "Chat group deleted successfully.",
         "deleted_messages": deleted_count,
         "chat_group_id": str(chat_group_id),
+    }
+
+def delete_chat_group(user_id, chat_group_id, db):
+    """
+    Delete a single chat group and all of its messages for a user.
+
+    Args:
+        user_id: User's UUID
+        chat_group_id: Chat group UUID
+        db: Database session
+    Returns:
+        Dict with deletion status and removed row count
+    """
+    response1 = delete_chat_group_chat(user_id, chat_group_id, db)
+    response2 = delete_chat_group_history(user_id, chat_group_id, db)
+    return {
+        "message": f"Chat group {chat_group_id} and its history deleted successfully.",
+        "deleted_messages": response1.get("deleted_messages", 0),
+        "chat_group_id": str(chat_group_id),
+        "deleted_history_entries": response2.get("deleted_entries", 0)
     }

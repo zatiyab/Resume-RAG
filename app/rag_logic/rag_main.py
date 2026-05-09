@@ -1,26 +1,22 @@
-from app.services.qdrant_client import (client,
-                                        get_relevant_docs,
+from app.services.qdrant_client import (get_relevant_docs,
                                         initialize_app_data,
-                                        add_history,
                                         get_hybrid_history)
+from app.vector_crud.history_crud import add_history
 from langchain_core.runnables import RunnableMap
 from langchain_core.prompts import PromptTemplate
-from app.core.config import llm
-from app.rag_logic.filter import create_filter, apply_resume_filters
-from app.models.resumes import ResumesMetadata
-from sqlalchemy import select, func
+from app.clients import get_llm
+from app.rag_logic.filter import retrieve_candidates
+
+llm = get_llm()
 
 def main(k, user_query, hist_id, user_id, db, chat_group_id=None):
-    filters = create_filter(user_query)
-    print(filters)
-   
-
-    query = select(ResumesMetadata.resume_vector_id, ResumesMetadata.name)
-
-    query = apply_resume_filters(query, filters)
-    print(query)
-    results = db.execute(query).scalars().all()
-    print(results)
+    
+    print(f"\nQuery: {user_query}")
+    results = retrieve_candidates(user_query, db, user_id)
+    print(f"Found {len(results)} candidates")
+    vector_ids = list(set([r.get('resume_vector_id') for r in results] ))
+    print(f"Candidate Vector IDs: {vector_ids}")  
+     
     
     selected_files = []
     retrieved_resume_context = ""
@@ -75,10 +71,10 @@ def main(k, user_query, hist_id, user_id, db, chat_group_id=None):
             retrieved_resume_context, selected_files = get_relevant_docs(
                 user_query=user_query,
                 user_id=user_id,
-                collection='resumes',
-                k=k
+                k=k,
+                vector_ids=vector_ids
             )
-            retrieved_resume_context = llm.invoke(f"Summarize the following candidates data for relevance to the question keep summary for each candidate seperate: {retrieved_resume_context}").content
+            retrieved_resume_context = llm.invoke(f"Summarize the following candidates data for relevance to the question keep summary for each candidate seperate but dont lose important data such as candidate information: {retrieved_resume_context}").content
         print(f"--- DEBUG: Retrieved Resume Context Length: {len(retrieved_resume_context)} ---")
 
     except Exception as e:
@@ -148,7 +144,7 @@ Provide a clear, direct answer:"""
         history_entry = f"""User: {original_user_input}
 Assistant: {result.content} 
 History Document Context: {retrieved_resume_context}"""
-        add_history(history_entry,hist_id,user_id)
+        add_history(history_entry,hist_id,user_id,chat_group_id)
         print("--- DEBUG: History entry added. ---")
     else:
         print("--- DEBUG: No meaningful result to add to history. ---")
@@ -156,4 +152,5 @@ History Document Context: {retrieved_resume_context}"""
     
     return {"result":result.content, 
     "history":history_entry,
+    "summarized_history": final_history_for_llm_prompt,
     "selected_files": selected_files}
