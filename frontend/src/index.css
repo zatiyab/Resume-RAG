@@ -1,5 +1,10 @@
 /* frontend/src/index.css */
 @import "tailwindcss";
+
+/* Force Tailwind V4 to scan these directories on Vercel */
+@source "../index.html";
+@source "./";
+
 @theme {
   --font-inter: Inter, sans-serif;
   --font-heading: "Plus Jakarta Sans", sans-serif;
