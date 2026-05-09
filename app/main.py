@@ -9,15 +9,16 @@ from app.api.resume_routes import router as resume_router
 
 from app.core.config import settings
 from app.services.qdrant_client import initialize_app_data
+from app.core.logger import logger
 
 # FastAPI Lifespan Context Manager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     initialize_app_data()  # Initialize collections and data on startup
-    print("FastAPI application startup event: Initializing services...")
+    logger.info("FastAPI application startup event: Initializing services...")
     yield
 
-    print("FastAPI application shutdown event.")
+    logger.info("FastAPI application shutdown event.")
 
 # FastAPI App instance
 app = FastAPI(

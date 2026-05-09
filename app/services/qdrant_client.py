@@ -1,4 +1,5 @@
 from qdrant_client.http import models as rest
+from app.core.logger import logger
 from qdrant_client.http.models import Distance, VectorParams, HnswConfigDiff  
 from qdrant_client.models import HasIdCondition, Filter
 import pdfplumber
@@ -101,7 +102,7 @@ Resume to extract metadata from:
         metadata_content = metadata_response.model_dump() if metadata_response else "{}"
         
     except Exception as e:
-        print(f"Error occurred while extracting metadata: {e}")
+        logger.error(f"Error occurred while extracting metadata: {e}")
         metadata_content = {
             "name": "",
             "location": "",        
@@ -199,9 +200,9 @@ RESUME TO PARSE:
         summarized_resume = summarized_resume.content.strip() if summarized_resume and summarized_resume.content else ""
         sections = ["CONTACT", "SUMMARY", "SKILLS", "EXPERIENCE", "PROJECTS", "EDUCATION", "CERTIFICATIONS"]
         section_chunks = {section: summarized_resume.split(f"### {section}")[1].split('###')[0].strip() if f"### {section}" in summarized_resume else "" for section in sections}
-        print(section_chunks)
+        logger.info(section_chunks)
     except Exception as e:
-        print(f"Error occurred while summarizing resume: {e}")
+        logger.error(f"Error occurred while summarizing resume: {e}")
         summarized_resume = "Error occurred while summarizing resume."
 
     return summarized_resume
@@ -224,16 +225,16 @@ def add_vectors(user_id=None, files_to_process:list=[],db=None, duplicate_files:
     from app.vector_crud.resumes_crud import batch_add_resumes as batch_add_resumes_to_qdrant
     from app.crud.user_resumes_crud import add_user_resumes,duplicate_resume_check
     from app.crud.resume_crud import get_resume_id_by_vector_id
-    print('User ID : ', user_id)
+    logger.info('User ID : ', user_id)
     
     resumes_in_db_qdrant = [resume.resume_name for resume in list_resumes(db)]
     resume_vector_id = get_cnt_resumes(db)  # Start vector IDs from the current count of resumes in DB to avoid collisions
-    print('Last Vector Id for user ', user_id, ': ', resume_vector_id, flush=True)
-    print('Existing Vectors for user ', user_id, ': ', resumes_in_db_qdrant, flush=True)
+    logger.info('Last Vector Id for user ', user_id, ': ', resume_vector_id)
+    logger.info('Existing Vectors for user ', user_id, ': ', resumes_in_db_qdrant)
 
-    print('Total No. of new resumes: ', len(files_to_process))
-    print('Duplicate files to skip: ', duplicate_files)
-    print('Files to process(not duplicates): ', files_to_process)
+    logger.info('Total No. of new resumes: ', len(files_to_process))
+    logger.info('Duplicate files to skip: ', duplicate_files)
+    logger.info('Files to process(not duplicates): ', files_to_process)
 
     user_uuid = uuid.UUID(user_id) if isinstance(user_id, str) else user_id
 
@@ -243,13 +244,13 @@ def add_vectors(user_id=None, files_to_process:list=[],db=None, duplicate_files:
     
     for duplicate in duplicate_files:
         if duplicate_resume_check(duplicate,user_id, db):
-            print(f"Duplicate file '{duplicate}' not found in DB during duplicate check. This should not happen. Skipping.")
+            logger.info(f"Duplicate file '{duplicate}' not found in DB during duplicate check. This should not happen. Skipping.")
             continue
         resume_id = find_resume_id_for_duplicate(duplicate, db) 
         if resume_id is None:
-            print(f"Could not find resume_id for duplicate file: {duplicate}")
+            logger.info(f"Could not find resume_id for duplicate file: {duplicate}")
             continue
-        print(f"Skipping duplicate file from processing: {duplicate}")
+        logger.info(f"Skipping duplicate file from processing: {duplicate}")
         resume_uuid = uuid.UUID(str(resume_id))
         add_user_resumes(user_id=user_uuid, resume_id=resume_uuid, db=db)
         
@@ -265,7 +266,7 @@ def add_vectors(user_id=None, files_to_process:list=[],db=None, duplicate_files:
                     if text:
                         resume_data += text.strip()
                     else:
-                        print(f"No text found on page {i}.")
+                        logger.info(f"No text found on page {i}.")
 
                     tables = page.extract_tables()
                     if tables:
@@ -278,13 +279,13 @@ def add_vectors(user_id=None, files_to_process:list=[],db=None, duplicate_files:
             if resume_data not in resumes_data_dict.values():
                 resumes_data_dict[resume] = resume_data
         except Exception as e:
-            print(f"Failed to process {resume} from Supabase: {e}")
+            logger.error(f"Failed to process {resume} from Supabase: {e}")
    
 
     resume_vector_ids = []
     
     for resume, resume_data in resumes_data_dict.items():
-        print(f'At {resume_vector_id}/{len(resumes_data_dict)}, {resume}') 
+        logger.info(f'At {resume_vector_id}/{len(resumes_data_dict)}, {resume}') 
         
 
         resume_data= basic_text_normalization(resume_data)
@@ -298,12 +299,12 @@ def add_vectors(user_id=None, files_to_process:list=[],db=None, duplicate_files:
         try:
             resume_id = get_resume_id_by_vector_id(resume_vector_id, db)
         except Exception as e:
-            print(f"Error occurred while fetching resume ID for vector ID {resume_vector_id}: {e}")
+            logger.error(f"Error occurred while fetching resume ID for vector ID {resume_vector_id}: {e}")
             continue
         add_user_resumes(user_id=user_uuid, resume_id=uuid.UUID(str(resume_id)), db=db)
     
 
-        print(f"Metadata for {resume}: {resume_metadata}")
+        logger.info(f"Metadata for {resume}: {resume_metadata}")
         
         resume_vector_ids.append(resume_vector_id)
         resume_vector_id+=1
@@ -353,7 +354,7 @@ def get_hybrid_history(
     from app.crud.chat_crud import get_last_k_history
     from app.vector_crud.history_crud import get_similar_history
     
-    print(f"--- DEBUG: Building hybrid history for user {user_id}, query: '{user_query}' ---")
+    logger.debug(f"--- DEBUG: Building hybrid history for user {user_id}, query: '{user_query}' ---")
     
     # Step 1: Get recent history for pronoun resolution
     try:
@@ -361,9 +362,9 @@ def get_hybrid_history(
         recent_histories = get_last_k_history(user_id, chat_group_id, db, k=k_recent)
         recent_text = "\n---\n".join(recent_histories)
 
-        print(f"--- DEBUG: Retrieved {len(recent_histories)} recent history entries ---")
+        logger.debug(f"--- DEBUG: Retrieved {len(recent_histories)} recent history entries ---")
     except Exception as e:
-        print(f"--- WARNING: Failed to get recent history: {e} ---")
+        logger.error(f"--- WARNING: Failed to get recent history: {e} ---")
         recent_text = ""
     
     # Step 2: Get vector-similar history
@@ -371,14 +372,14 @@ def get_hybrid_history(
     similar_text = ""
     try:
         if not use_vector_similarity or int(k_similar) <= 0:
-            print("--- DEBUG: Skipping vector-similar history retrieval because k_similar <= 0 ---")
+            logger.debug("--- DEBUG: Skipping vector-similar history retrieval because k_similar <= 0 ---")
         else:
             safe_k_similar = max(1, int(k_similar))
             similar_histories = get_similar_history(user_id, chat_group_id, user_query, k=safe_k_similar)
             similar_text = "\n---\n".join(similar_histories)
-            print(f"--- DEBUG: Retrieved {len(similar_histories)} vector-similar history entries ---")
+            logger.debug(f"--- DEBUG: Retrieved {len(similar_histories)} vector-similar history entries ---")
     except Exception as e:
-        print(f"--- WARNING: Failed to get vector-similar history: {e} ---")
+        logger.error(f"--- WARNING: Failed to get vector-similar history: {e} ---")
         similar_text = ""
     
     # Step 3: Combine with proper structure
@@ -393,10 +394,10 @@ def get_hybrid_history(
         combined += f"RELATED CONTEXT (semantically similar conversations):\n{similar_text}"
     
     if not combined:
-        print("--- DEBUG: No history found, using empty context ---")
+        logger.debug("--- DEBUG: No history found, using empty context ---")
         combined = ""
     
-    print(f"--- DEBUG: Combined history length: {len(combined)} characters ---")
+    logger.debug(f"--- DEBUG: Combined history length: {len(combined)} characters ---")
     return combined
 
 def get_relevant_docs(user_query,user_id,k=5,vector_ids=[]):
@@ -411,12 +412,12 @@ def get_relevant_docs(user_query,user_id,k=5,vector_ids=[]):
     Returns all_docs_data -> All the k documents joined together in one string
     '''
 
-    print(f"\n--- DEBUG: Inside get_relevant_docs for query: '{user_query}' ---")
-    print(f"--- DEBUG: User ID: {user_id} ---")
+    logger.debug(f"\n--- DEBUG: Inside get_relevant_docs for query: '{user_query}' ---")
+    logger.debug(f"--- DEBUG: User ID: {user_id} ---")
 
     # Check if collection exists
     if not qdrant_client.collection_exists("resumes"):
-        print(f"--- ERROR: Collection 'resumes' does not exist in Qdrant ---")
+        logger.error(f"--- ERROR: Collection 'resumes' does not exist in Qdrant ---")
         return "", []
 
     # Check if there are ANY resumes for this user
@@ -432,14 +433,14 @@ def get_relevant_docs(user_query,user_id,k=5,vector_ids=[]):
             )
         )
 
-        print(f"--- DEBUG: Total resumes for user {user_id}: {user_resumes_count.count} ---")
+        logger.debug(f"--- DEBUG: Total resumes for user {user_id}: {user_resumes_count.count} ---")
         if user_resumes_count.count == 0:
-            print(f"--- ERROR: No resumes found in Qdrant for user {user_id}. Upload resumes first. ---")
+            logger.error(f"--- ERROR: No resumes found in Qdrant for user {user_id}. Upload resumes first. ---")
             return "", []
     except Exception as e:
-        print(f"--- ERROR: Failed to count resumes: {e} ---")
+        logger.error(f"--- ERROR: Failed to count resumes: {e} ---")
 
-    print(f"--- DEBUG: Encoding query for retrieval: '{user_query}' ---")
+    logger.debug(f"--- DEBUG: Encoding query for retrieval: '{user_query}' ---")
     
     
     
@@ -447,7 +448,7 @@ def get_relevant_docs(user_query,user_id,k=5,vector_ids=[]):
         from app.vector_crud.resumes_crud import get_similar_resumes
         similar_resumes = get_similar_resumes(user_query, user_id, must_conditions, k=k)
     except Exception as e:
-        print(f"--- ERROR: Qdrant query_points failed: {e} ---")
+        logger.error(f"--- ERROR: Qdrant query_points failed: {e} ---")
         return "", []
 
     # Normalize retrieval result to a dict with a `points` list.
@@ -469,19 +470,19 @@ def get_relevant_docs(user_query,user_id,k=5,vector_ids=[]):
     else:
         results = {"points": []}
 
-    print(f"--- DEBUG: Retrieved {len(results['points'])} similar resumes from Qdrant ---")
-    print(f"--- DEBUG: Qdrant Search Result (points count): {len(results['points'])} ---")
+    logger.debug(f"--- DEBUG: Retrieved {len(results['points'])} similar resumes from Qdrant ---")
+    logger.debug(f"--- DEBUG: Qdrant Search Result (points count): {len(results['points'])} ---")
     
     if results['points']:
         for i, result in enumerate(results['points'][:3]):  # Show top 3
-            print(f"--- DEBUG: Result {i+1}: ID={result['id']}, Score={result['score']:.3f}, Source={result['payload'].get('source', 'N/A')} ---")
+            logger.debug(f"--- DEBUG: Result {i+1}: ID={result['id']}, Score={result['score']:.3f}, Source={result['payload'].get('source', 'N/A')} ---")
 
     if not results['points']:
-        print("--- WARNING: Qdrant returned 0 points. Retrieval failed. ---")
+        logger.error("--- WARNING: Qdrant returned 0 points. Retrieval failed. ---")
         return "", []
 
     # --- RERANKING STAGE: Use Cohere rerank to improve relevance ---
-    print(f"--- DEBUG: Starting Cohere reranking on {len(results['points'])} candidates ---")
+    logger.debug(f"--- DEBUG: Starting Cohere reranking on {len(results['points'])} candidates ---")
     
     try:
         # Prepare documents for reranking
@@ -503,9 +504,9 @@ def get_relevant_docs(user_query,user_id,k=5,vector_ids=[]):
         # Reorder results by rerank score
         reranked_indices = [result.index for result in rerank_result.results]
         reranked_results = [results['points'][idx] for idx in reranked_indices]
-        print(f"--- DEBUG: Reranking complete. Top {len(reranked_results)} results selected ---")
+        logger.debug(f"--- DEBUG: Reranking complete. Top {len(reranked_results)} results selected ---")
     except Exception as e:
-        print(f"--- WARNING: Reranking failed: {e}. Using original Qdrant order. ---")
+        logger.error(f"--- WARNING: Reranking failed: {e}. Using original Qdrant order. ---")
         reranked_results = results['points'][:min(k, 5)]
     
     # --- CONTEXT COMPRESSION: Extract key fields instead of full resume ---
@@ -520,27 +521,27 @@ def get_relevant_docs(user_query,user_id,k=5,vector_ids=[]):
         page_content = result['payload'].get('page_content', '')
         
         selected_files.append(source)
-        print(f'--- DEBUG: Reranked Resume {cnt_resume}: {source}, Score: {score:.3f} ---')
+        logger.debug(f'--- DEBUG: Reranked Resume {cnt_resume}: {source}, Score: {score:.3f} ---')
         
         # Pass full resume but cap total context size
         data = f"Resume-{cnt_resume} ({source})\n\n{page_content}"  # Limit to 2000 chars per resume
         all_docs_data += data + "\n\n---\n\n"
         cnt_resume += 1
 
-    print(f"--- DEBUG: Total context length for LLM: {len(all_docs_data)} tokens (approx {len(all_docs_data)//4}) ---")
-    print(f"--- DEBUG: Selected Files for Download: {selected_files} ---")
+    logger.debug(f"--- DEBUG: Total context length for LLM: {len(all_docs_data)} tokens (approx {len(all_docs_data)//4}) ---")
+    logger.debug(f"--- DEBUG: Selected Files for Download: {selected_files} ---")
   
     return all_docs_data, selected_files
 
 
 def initialize_app_data():
-    print("--- Initializing collections and data... ---")
+    logger.info("--- Initializing collections and data... ---")
 
     if qdrant_client is None:
         raise RuntimeError("Qdrant qdrant_client is not initialized. Check QDRANT_URL, QDRANT_API_KEY and network connectivity.")
 
     if not qdrant_client.collection_exists("resumes"):
-        print("--- Creating 'resumes' collection ---")
+        logger.info("--- Creating 'resumes' collection ---")
         qdrant_client.create_collection(
             collection_name="resumes",
             vectors_config=VectorParams(
@@ -555,7 +556,7 @@ def initialize_app_data():
         
     # Initialize 'history' collection
     if not qdrant_client.collection_exists("history"):
-        print("--- Creating 'history' collection ---")
+        logger.info("--- Creating 'history' collection ---")
         qdrant_client.create_collection(
             collection_name="history",
             vectors_config=VectorParams(size=1536, distance=Distance.COSINE, on_disk=False)
@@ -564,8 +565,8 @@ def initialize_app_data():
         try:
             qdrant_client.create_payload_index(collection_name="history", field_name="user_id", field_schema=rest.PayloadSchemaType.KEYWORD)
             qdrant_client.create_payload_index(collection_name="history", field_name="chat_group_id", field_schema=rest.PayloadSchemaType.KEYWORD)
-            print("Created payload index 'user_id' and 'chat_group_id' on 'history' collection")
+            logger.info("Created payload index 'user_id' and 'chat_group_id' on 'history' collection")
         except Exception as e:
-            print(f"Warning: failed to create payload index for history.user_id and/or history.chat_group_id: {e}")
-    print("--- Initial app data setup complete. ---")
+            logger.error(f"Warning: failed to create payload index for history.user_id and/or history.chat_group_id: {e}")
+    logger.info("--- Initial app data setup complete. ---")
 

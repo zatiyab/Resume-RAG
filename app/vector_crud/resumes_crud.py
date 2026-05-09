@@ -1,6 +1,7 @@
 from app.clients import get_qdrant
 from qdrant_client.models import MatchValue, PointStruct, Filter, FieldCondition
 from app.services.qdrant_client import _embed_text
+from app.core.logger import logger
 
 qdrant_client = get_qdrant()
 
@@ -24,7 +25,7 @@ def batch_add_resumes(resume_names: list, resume_texts: list, resume_vector_ids:
 
     if points:
         num_batches = (len(points) + BATCH_SIZE - 1) // BATCH_SIZE
-        print(f"Upserting in batches of {BATCH_SIZE}. Total batches: {num_batches}")
+        logger.info(f"Upserting in batches of {BATCH_SIZE}. Total batches: {num_batches}")
         for batch_start in range(0, len(points), BATCH_SIZE):
             batch_points = points[batch_start:batch_start + BATCH_SIZE]
             operation_info = qdrant_client.upsert(
@@ -32,7 +33,7 @@ def batch_add_resumes(resume_names: list, resume_texts: list, resume_vector_ids:
                 wait=True,
                 points=batch_points
             )
-            print(operation_info)
+            logger.debug(operation_info)
             batch_operations_info.append(operation_info)
     return batch_operations_info
 
@@ -52,7 +53,7 @@ def get_resumes_with_source(user_id: str) -> list[dict]:
             for result in all_resumes_for_user[0]
         ]
     except Exception as e:
-        print(f"Error fetching resumes for user {user_id}: {e}")
+        logger.error(f"Error fetching resumes for user {user_id}: {e}")
         return []
     
 def delete_resumes_by_user_id(user_id: str):
@@ -67,9 +68,9 @@ def delete_resumes_by_user_id(user_id: str):
             collection_name="resumes",
             points_selector=user_filter
         )
-        print(f"--- DEBUG: Resumes Deleted for user {user_id}: {operation_info} ---")
+        logger.debug(f"--- DEBUG: Resumes Deleted for user {user_id}: {operation_info} ---")
     except Exception as e:
-        print(f"Error deleting resumes for user {user_id}: {e}")
+        logger.error(f"Error deleting resumes for user {user_id}: {e}")
 
 def get_similar_resumes(user_query, user_id,must_conditions, k=5):
     '''
@@ -79,9 +80,9 @@ def get_similar_resumes(user_query, user_id,must_conditions, k=5):
         try:
             # Use search_query input type for better alignment with search_document embeddings
             query_embedding = _embed_text(user_query.lower(), input_type="search_query")
-            print(f"--- DEBUG: Query embedding generated successfully, vector size: {len(query_embedding)} ---")
+            logger.debug(f"--- DEBUG: Query embedding generated successfully, vector size: {len(query_embedding)} ---")
         except Exception as e:
-            print(f"--- ERROR: Failed to embed query: {e} ---")
+            logger.error(f"--- ERROR: Failed to embed query: {e} ---")
             return []
         
         
@@ -96,7 +97,7 @@ def get_similar_resumes(user_query, user_id,must_conditions, k=5):
         )
         return search_result
     except Exception as e:
-        print(f"Error fetching similar resumes for user {user_id}: {e}")
+        logger.error(f"Error fetching similar resumes for user {user_id}: {e}")
         return []
     
 def remove_resume_from_qdrant(user_id, file_name):
@@ -111,6 +112,6 @@ def remove_resume_from_qdrant(user_id, file_name):
             collection_name="resumes",
             points_selector=delete_filter
         )
-        print(f"Deleted resume '{file_name}' for user '{user_id}' from Qdrant: {delete_result}")
+        logger.info(f"Deleted resume '{file_name}' for user '{user_id}' from Qdrant: {delete_result}")
     except Exception as e:
-        print(f"Error deleting resume '{file_name}' for user '{user_id}' from Qdrant: {e}")
+        logger.error(f"Error deleting resume '{file_name}' for user '{user_id}' from Qdrant: {e}")

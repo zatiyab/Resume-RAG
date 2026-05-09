@@ -1,3 +1,4 @@
+from app.core.logger import logger
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from sqlalchemy.orm import Session
 from app.api.dependencies import get_db_with_retry
@@ -23,10 +24,10 @@ router = APIRouter(tags=["resumes"])
 async def list_resumes(user_id: str, db: Session = Depends(get_db_with_retry)):
     try:
         resumes = list_resumes_by_user_id(user_id, db)
-        print(f"Resumes for user {user_id}: {resumes}")
+        logger.info(f"Resumes for user {user_id}: {resumes}")
         return {"resumes": resumes}
     except Exception as e:
-        print(f"Error listing resumes for user {user_id}: {e}")
+        logger.error(f"Error listing resumes for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail="Error retrieving resume list")
 
 
@@ -45,7 +46,7 @@ async def get_resume(user_id: str, file_name: str):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error fetching resume {file_name} for user {user_id}: {e}")
+        logger.error(f"Error fetching resume {file_name} for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail="Error retrieving resume file")
 
 
@@ -59,7 +60,7 @@ async def upload_resumes(files: list[UploadFile] = File(...), user_id: str = Non
         file_names = [f.filename for f in files] if files else []
     except Exception:
         file_names = []
-    print(f"upload_resumes called for user_id={user_id} with {len(file_names)} files: {file_names}")
+    logger.info(f"upload_resumes called for user_id={user_id} with {len(file_names)} files: {file_names}")
 
     if not files:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No files provided")
@@ -88,13 +89,13 @@ async def upload_resumes(files: list[UploadFile] = File(...), user_id: str = Non
                 stored_name = f"{safe_stem}.pdf"
             try:
                 path = await asyncio.to_thread(upload_resume_to_storage, content, stored_name)
-                print("Uploaded to Supabase at:", path)
+                logger.info("Uploaded to Supabase at:", path)
             except ValueError as e:
                 is_duplicate.append(stored_name)
-                print(f"Duplicate file skipped: {stored_name} \n {e}")
+                logger.info(f"Duplicate file skipped: {stored_name} \n {e}")
                 raise HTTPException(status_code=500, detail=f"Failed to upload {filename}: {e}")
             except Exception as e:
-                print(f"Unexpected error occurred while uploading {stored_name}: {e}")
+                logger.error(f"Unexpected error occurred while uploading {stored_name}: {e}")
                 raise HTTPException(status_code=500, detail=f"Failed to upload {filename}: {e}")
             else:
                 saved_files.append(stored_name)
@@ -104,7 +105,7 @@ async def upload_resumes(files: list[UploadFile] = File(...), user_id: str = Non
             await uploaded_file.close()
 
     if not saved_files and not is_duplicate:
-        print(f"No saved files. Skipped files: {skipped_files}")
+        logger.info(f"No saved files. Skipped files: {skipped_files}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
@@ -116,7 +117,7 @@ async def upload_resumes(files: list[UploadFile] = File(...), user_id: str = Non
     # Pass the newly uploaded files to add_vectors to avoid redundant Supabase fetch
     # and duplicate checks - we already know these files are new
     if is_duplicate:
-        print(f"Duplicate file names detected during upload. Skipped files: {skipped_files}")
+        logger.info(f"Duplicate file names detected during upload. Skipped files: {skipped_files}")
 
     ingestion_result = await asyncio.to_thread(add_vectors,
                                                user_id=user_id, 
@@ -145,7 +146,7 @@ async def download_resumes(request: DownloadRequest):
                 file_bytes = await asyncio.to_thread(download_resume_bytes_from_storage, file_path)
                 zip_file.writestr(file_name, file_bytes)
             except Exception as e:
-                print(f"Error downloading {file_name}: {e}")
+                logger.error(f"Error downloading {file_name}: {e}")
                 pass
                 
         # Guard against shipping an empty ZIP if all files failed to be fetched
@@ -170,7 +171,7 @@ async def remove_resume(user_id: str, file_name: str, db: Session = Depends(get_
         delete_resume_from_file_name_user_id(file_name, user_id, db)
         return {"message": f"Resume '{file_name}' deleted successfully"}
     except Exception as e:
-        print(f"Error deleting resume {file_name} for user {user_id}: {e}")
+        logger.error(f"Error deleting resume {file_name} for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail="Error deleting resume")
 
 
@@ -190,21 +191,21 @@ async def clear_data(user_id: str,db: Session = Depends(get_db_with_retry)):
                 for resume_name in data['resumes']:
                     await client.delete("http://localhost:5000/resume", params={"user_id": user_id, "file_name": resume_name})
         except Exception as e:
-            print(f"Error clearing resumes from storage: {e}")            
+            logger.error(f"Error clearing resumes from storage: {e}")            
         
         # Delete from history collection
         try:
             await asyncio.to_thread(delete_history_by_user_id_from_qdrant, user_id)
         except Exception as e:
-            print(f"Error clearing history from Qdrant: {e}")
+            logger.error(f"Error clearing history from Qdrant: {e}")
 
         try:
             delete_chat_history_from_db(user_id, db)
         except Exception as e:
-            print(f"Error clearing chat history: {e}")
+            logger.error(f"Error clearing chat history: {e}")
 
         return {"message": "Data deleted successfully"}
     except Exception as e:
-        print(f"Error clearing data for user {user_id}: {e}")
+        logger.error(f"Error clearing data for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail="Error clearing data")
     

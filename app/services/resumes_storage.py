@@ -1,4 +1,5 @@
 from app.clients import get_supabase_client
+from app.core.logger import logger
 
 
 
@@ -29,11 +30,11 @@ def list_user_resumes() -> list[dict]:
         if isinstance(response, tuple) and len(response) == 2:
             data, err = response
             if err:
-                print(f"Error listing resumes from Supabase: {err}")
+                logger.error(f"Error listing resumes from Supabase: {err}")
                 return all_files
             page = data or []
         elif isinstance(response, dict) and response.get("statusCode") is not None:
-            print(f"Error listing resumes from Supabase: {response}")
+            logger.error(f"Error listing resumes from Supabase: {response}")
             return all_files
         else:
             page = response or []
@@ -60,7 +61,7 @@ def download_resume_bytes(file_path: str) -> bytes:
     # is not found (e.g. {'statusCode': 404, 'error': 'not_found', ...}).
     # Normalize this to `None` so the calling route can return a 404.
     if isinstance(resp, dict) and resp.get("statusCode") is not None:
-        print(f"Failed to download {file_path} from Supabase: {resp}")
+        logger.error(f"Failed to download {file_path} from Supabase: {resp}")
         return None
     return resp
 
@@ -71,7 +72,7 @@ def upload_resume(file_bytes: bytes, resume_name: str) -> str:
     file_path = f"{resume_name}"
     existing_files = list_user_resumes()
     existing_names = [f.get("name") if isinstance(f, dict) else getattr(f, "name", None) for f in existing_files]
-    print(f"Existing files: {len(existing_names)}")
+    logger.debug(f"Existing files: {len(existing_names)}")
     if resume_name in existing_names:
         raise ValueError(f"A resume with the name '{resume_name}' already exists. Skipping upload.")
     upload_resp = supabase.storage.from_("Resumes").upload(
@@ -84,10 +85,10 @@ def upload_resume(file_bytes: bytes, resume_name: str) -> str:
     if isinstance(upload_resp, tuple) and len(upload_resp) == 2:
         data, err = upload_resp
         if err:
-            print(f"Supabase upload error for {file_path}: {err}")
+            logger.error(f"Supabase upload error for {file_path}: {err}")
             raise RuntimeError(f"Failed to upload {file_path}: {err}")
     elif isinstance(upload_resp, dict) and upload_resp.get("statusCode") is not None:
-        print(f"Supabase upload error for {file_path}: {upload_resp}")
+        logger.error(f"Supabase upload error for {file_path}: {upload_resp}")
         raise RuntimeError(f"Failed to upload {file_path}: {upload_resp}")
 
 

@@ -1,3 +1,4 @@
+from app.core.logger import logger
 # backend/app/services/auth_service.py (UPDATED for Synchronous Auth Service)
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -49,18 +50,18 @@ class AuthService:
         Returns None if token is invalid or expired.
         """
         try:
-            print(f"[TOKEN DEBUG] Decoding token with SECRET_KEY (first 20 chars): {settings.SECRET_KEY[:20]}...")
-            print(f"[TOKEN DEBUG] Using algorithm: {settings.ALGORITHM}")
+            logger.debug(f"[TOKEN DEBUG] Decoding token with SECRET_KEY (first 20 chars): {settings.SECRET_KEY[:20]}...")
+            logger.debug(f"[TOKEN DEBUG] Using algorithm: {settings.ALGORITHM}")
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-            print(f"[TOKEN DEBUG] Token decoded successfully. Payload: {payload}")
+            logger.debug(f"[TOKEN DEBUG] Token decoded successfully. Payload: {payload}")
             user_id: str = payload.get("sub")
             if user_id is None:
-                print("[TOKEN DEBUG] Token payload missing 'sub' claim")
+                logger.debug("[TOKEN DEBUG] Token payload missing 'sub' claim")
                 raise JWTError("Token payload missing 'sub' claim")
-            print(f"[TOKEN DEBUG] Extracted user_id: {user_id}")
+            logger.debug(f"[TOKEN DEBUG] Extracted user_id: {user_id}")
             return user_id
         except JWTError as e:
-            print(f"[TOKEN DEBUG] JWTError: {str(e)}")
+            logger.error(f"[TOKEN DEBUG] JWTError: {str(e)}")
             return None
     
     def refresh_access_token(self, token: str) -> Optional[str]:

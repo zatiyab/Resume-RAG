@@ -1,3 +1,4 @@
+from app.core.logger import logger
 from langchain_core.messages import HumanMessage
 from sqlalchemy import text
 from pydantic.config import ConfigDict
@@ -194,13 +195,13 @@ Query: {query}
 
     # 6. Build and run SQL
     sql, params = build_sql(filters, user_id)
-    print(f"Constructed SQL: {sql}")
-    print(f"SQL Parameters: {params}")
+    logger.info(f"Constructed SQL: {sql}")
+    logger.info(f"SQL Parameters: {params}")
     try:
         results = db.execute(sql, params).fetchall()
         return [dict(r._mapping) for r in results]
     except Exception as e:
         # Log the exact SQL for debugging
-        print(f"SQL error: {e}")
-        print(f"Filters applied: {filters}")
+        logger.error(f"SQL error: {e}")
+        logger.info(f"Filters applied: {filters}")
         raise

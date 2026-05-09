@@ -1,3 +1,4 @@
+from app.core.logger import logger
 import subprocess
 import os
 import unicodedata
@@ -17,18 +18,18 @@ import uuid
 #                 i = "_"
 #             new_name+=i
         
-#         print(f"Renamed: {file.name} → {new_name}")
+#         logger.info(f"Renamed: {file.name} → {new_name}")
 
 
 import shutil
 
 def convert_with_libreoffice(input_path):
     if not os.path.isfile(input_path):
-        print(f"File not found: {input_path}")
+        logger.info(f"File not found: {input_path}")
         return
 
     if not input_path.lower().endswith(('.doc', '.docx')):
-        print(f"Skipped unsupported file: {input_path}")
+        logger.info(f"Skipped unsupported file: {input_path}")
         return
 
     output_dir = os.path.dirname(input_path)
@@ -53,9 +54,9 @@ def convert_with_libreoffice(input_path):
             "--outdir", output_dir,
             input_path
         ], check=True)
-        print(f"Converted: {input_path}")
+        logger.info(f"Converted: {input_path}")
     except Exception as e:
-        print(f"Error executing soffice: {e}")
+        logger.error(f"Error executing soffice: {e}")
 
 def convert_all_docs_in_folder(folder_path):
     for filename in os.listdir(folder_path):
@@ -72,7 +73,7 @@ def remove_same_files(folder):
     for resume in resumes:
         resume = resume.rstrip('.pdf')
         if re.search(pattern,resume):
-            print('Copy : ',resume)
+            logger.info('Copy : ',resume)
 
 def basic_text_normalization(text: str) -> str:
     """Basic cleaning that should be applied to all text"""

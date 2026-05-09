@@ -1,3 +1,4 @@
+from app.core.logger import logger
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -57,7 +58,7 @@ async def get_chat_history_endpoint(user_id: str, limit: int = 5, offset: int = 
         history_data["hasMore"] = (offset + limit) < history_data["total"]
         return history_data
     except Exception as e:
-        print(f"Error fetching chat history for user {user_id}: {e}")
+        logger.error(f"Error fetching chat history for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail="Error retrieving chat history")
 
 
@@ -79,7 +80,7 @@ async def get_chat_groups_endpoint(user_id: str, db: Session = Depends(get_db_wi
     try:
         return {"groups": get_chat_groups(user_uuid, db=db)}
     except Exception as e:
-        print(f"Error fetching chat groups for user {user_id}: {e}")
+        logger.error(f"Error fetching chat groups for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail="Error retrieving chat groups")
 
 
@@ -126,7 +127,7 @@ async def delete_chat_group_endpoint(
         # Delete from SQL database
         return delete_chat_group_from_db(user_uuid, group_uuid, db=db)
     except Exception as e:
-        print(f"Error deleting chat group {chat_group_id} for user {user_id}: {e}")
+        logger.error(f"Error deleting chat group {chat_group_id} for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail="Error deleting chat group")
 
 

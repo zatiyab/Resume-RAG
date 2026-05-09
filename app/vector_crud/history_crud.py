@@ -3,6 +3,7 @@ import datetime
 from qdrant_client.models import PointStruct
 
 from app.services.qdrant_client import _embed_text
+from app.core.logger import logger
 
 qdrant_client = get_qdrant()
 
@@ -27,7 +28,7 @@ def add_history(history_text: str, hist_id, user_id,chat_group_id):
             points=[point]
         )
 
-    print(f"--- DEBUG: History Added: {operation_info} ---")
+    logger.debug(f"--- DEBUG: History Added: {operation_info} ---")
 
 def delete_history(hist_id):
     '''
@@ -37,7 +38,7 @@ def delete_history(hist_id):
         collection_name="history",
         points_selector=hist_id
     )
-    print(f"--- DEBUG: History Deleted: {operation_info} ---")
+    logger.debug(f"--- DEBUG: History Deleted: {operation_info} ---")
 
 def delete_history_by_user_id(user_id):
     '''
@@ -51,7 +52,7 @@ def delete_history_by_user_id(user_id):
         collection_name="history",
         points_selector=user_filter
     )
-    print(f"--- DEBUG: History Deleted for user {user_id}: {operation_info} ---")
+    logger.debug(f"--- DEBUG: History Deleted for user {user_id}: {operation_info} ---")
 
 def get_similar_history(user_id, chat_group_id,user_query, k=5):
     '''
@@ -94,4 +95,4 @@ def delete_history_by_chat_group_id(user_id, chat_group_id):
         collection_name="history",
         points_selector=user_chat_filter
     )
-    print(f"--- DEBUG: History Deleted for user {user_id} and chat group {chat_group_id}: {operation_info} ---")
+    logger.debug(f"--- DEBUG: History Deleted for user {user_id} and chat group {chat_group_id}: {operation_info} ---")

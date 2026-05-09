@@ -1,3 +1,4 @@
+from app.core.logger import logger
 from app.rag_logic.rag_main import main
 from app.crud.chat_crud import add_chat as add_chat_to_db,add_history as add_history_to_db
 import uuid
@@ -9,7 +10,7 @@ async def post_chat_messages(data,db):
     # If the frontend passes 'default' or None, create a fresh chat_group_id UUID for this invocation
     chat_group_id = data.chat_group_id if data.chat_group_id and data.chat_group_id != "default" else str(uuid.uuid4())
     k = data.k
-    print(data)
+    logger.info(data)
     
     add_chat_to_db(user_id=user_id,role="user",content=user_query,chat_group_id=chat_group_id,db=db)
     # Pass chat_group_id into main so history retrieval is scoped per chat group

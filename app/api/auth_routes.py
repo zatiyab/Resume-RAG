@@ -1,3 +1,4 @@
+from app.core.logger import logger
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -30,7 +31,7 @@ async def signup_user(user_in: UserCreate, db: Session = Depends(get_db_with_ret
     except HTTPException as e:
         raise e
     except Exception as e:
-        print(f"ERROR: Unhandled exception during signup for email {user_in.email}: {type(e).__name__} - {e}")
+        logger.error(f"ERROR: Unhandled exception during signup for email {user_in.email}: {type(e).__name__} - {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected server error occurred during signup. Please try again."
@@ -52,7 +53,7 @@ async def login_user(user_in: UserLogin, auth_service: AuthService = Depends(get
     except HTTPException as e:
         raise e
     except Exception as e:
-        print(f"ERROR: Unhandled exception during login for email {user_in.email}: {type(e).__name__} - {e}")
+        logger.error(f"ERROR: Unhandled exception during login for email {user_in.email}: {type(e).__name__} - {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected server error occurred during login."
