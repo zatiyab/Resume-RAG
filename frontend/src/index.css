@@ -30,7 +30,7 @@
   --color-hiremind-input-border-light: #E2E8F0;
 }
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* Define CSS Variables for your custom theme colors */
 :root {
