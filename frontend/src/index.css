@@ -1,6 +1,36 @@
 /* frontend/src/index.css */
 @import "tailwindcss";
-@config "../tailwind.config.js";
+@theme {
+  --font-inter: Inter, sans-serif;
+  --font-heading: "Plus Jakarta Sans", sans-serif;
+
+  --color-hiremind-darkblue: #0A1118;
+  --color-hiremind-emerald-primary: #10B981;
+  --color-hiremind-teal-primary: #14B8A6;
+  
+  --color-hiremind-bg-dark: #060B11;
+  --color-hiremind-sidebar-dark: #0A1118;
+  --color-hiremind-element-dark: #111827;
+  --color-hiremind-text-dark-primary: #F8FAFC;
+  --color-hiremind-text-dark-secondary: #94A3B8;
+
+  --color-hiremind-bg-light: #F8FAFC;
+  --color-hiremind-sidebar-light: #FFFFFF;
+  --color-hiremind-element-light: #F1F5F9;
+  --color-hiremind-text-light-primary: #0F172A;
+  --color-hiremind-text-light-secondary: #64748B;
+
+  --color-hiremind-accent-teal: #14B8A6;
+  --color-hiremind-accent-emerald: #10B981;
+  
+  --color-hiremind-purple-primary: #060B11;
+  --color-hiremind-purple-accent: #10B981;
+  --color-hiremind-light-bg-card: #FFFFFF;
+  --color-hiremind-input-bg-light: #F8FAFC;
+  --color-hiremind-input-border-light: #E2E8F0;
+}
+
+@custom-variant dark (&:is(.dark *));
 
 /* Define CSS Variables for your custom theme colors */
 :root {
