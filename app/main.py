@@ -17,7 +17,7 @@ from app.core.logger import logger
 # FastAPI Lifespan Context Manager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    initialize_app_data()  # Initialize collections and data on startup
+    # initialize_app_data()  # Initialize collections and data on startup
     logger.info("FastAPI application startup event: Initializing services...")
     yield
 
