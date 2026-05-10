@@ -536,31 +536,74 @@ def initialize_app_data():
     if qdrant_client is None:
         raise RuntimeError("Qdrant qdrant_client is not initialized. Check QDRANT_URL, QDRANT_API_KEY and network connectivity.")
 
+    def ensure_collection(collection_name: str, vectors_config: VectorParams) -> None:
+        try:
+            qdrant_client.create_collection(
+                collection_name=collection_name,
+                vectors_config=vectors_config,
+            )
+        except Exception as exc:
+            message = str(exc).lower()
+            if "already exists" in message or "409" in message:
+                logger.info("--- Qdrant collection '%s' already exists; skipping creation ---", collection_name)
+                return
+            raise
+
+    def ensure_payload_index(collection_name: str, field_name: str, field_schema) -> None:
+        try:
+            qdrant_client.create_payload_index(
+                collection_name=collection_name,
+                field_name=field_name,
+                field_schema=field_schema,
+            )
+        except Exception as exc:
+            message = str(exc).lower()
+            if "already exists" in message or "409" in message:
+                logger.info(
+                    "--- Qdrant payload index '%s' on '%s' already exists; skipping creation ---",
+                    field_name,
+                    collection_name,
+                )
+                return
+            raise
+
     if not qdrant_client.collection_exists("resumes"):
         logger.info("--- Creating 'resumes' collection ---")
-        qdrant_client.create_collection(
-            collection_name="resumes",
-            vectors_config=VectorParams(
+        ensure_collection(
+            "resumes",
+            VectorParams(
                 size=1536,
                 distance=Distance.COSINE,
                 hnsw_config=HnswConfigDiff(m=16, ef_construct=128, full_scan_threshold=10000),
-                on_disk=False
-            )
+                on_disk=False,
+            ),
         )
-        
-        qdrant_client.create_payload_index(collection_name="resumes", field_name='source', field_schema=rest.PayloadSchemaType.KEYWORD)
+
+        ensure_payload_index(
+            collection_name="resumes",
+            field_name="source",
+            field_schema=rest.PayloadSchemaType.KEYWORD,
+        )
         
     # Initialize 'history' collection
     if not qdrant_client.collection_exists("history"):
         logger.info("--- Creating 'history' collection ---")
-        qdrant_client.create_collection(
-            collection_name="history",
-            vectors_config=VectorParams(size=1536, distance=Distance.COSINE, on_disk=False)
+        ensure_collection(
+            "history",
+            VectorParams(size=1536, distance=Distance.COSINE, on_disk=False),
         )
         # Create payload index for user_id so filters/deletes by user_id are supported
         try:
-            qdrant_client.create_payload_index(collection_name="history", field_name="user_id", field_schema=rest.PayloadSchemaType.KEYWORD)
-            qdrant_client.create_payload_index(collection_name="history", field_name="chat_group_id", field_schema=rest.PayloadSchemaType.KEYWORD)
+            ensure_payload_index(
+                collection_name="history",
+                field_name="user_id",
+                field_schema=rest.PayloadSchemaType.KEYWORD,
+            )
+            ensure_payload_index(
+                collection_name="history",
+                field_name="chat_group_id",
+                field_schema=rest.PayloadSchemaType.KEYWORD,
+            )
             logger.info("Created payload index 'user_id' and 'chat_group_id' on 'history' collection")
         except Exception as e:
             logger.error(f"Warning: failed to create payload index for history.user_id and/or history.chat_group_id: {e}")
