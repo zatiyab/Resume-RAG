@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.services.qdrant_client import initialize_app_data
 from app.core.logger import logger
 
-print(qdrant_client.collection_exists("resumes"))
+
 # FastAPI Lifespan Context Manager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
