@@ -1,1 +1,1 @@
-gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app
+gunicorn --bind 0.0.0.0:8000 --timeout 600 -w 2 -k uvicorn.workers.UvicornWorker app.main:app

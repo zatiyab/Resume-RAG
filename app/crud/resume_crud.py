@@ -1,7 +1,7 @@
 from app.models.resumes import Resume
 
 
-def add_resume(file_path, resume_name, skills=None, experience_years=None, raw_location=None, state=None, city=None, domain=None, name=None, resume_vector_id=None, db=None):
+def add_resume(file_path, resume_name, skills=None, experience_years=None, raw_location=None, state=None, city=None, name=None, resume_vector_id=None, db=None):
     resume = Resume(
         file_path=file_path,
         resume_name=resume_name,
@@ -10,7 +10,6 @@ def add_resume(file_path, resume_name, skills=None, experience_years=None, raw_l
         raw_location=raw_location,
         state=state,
         city=city,
-        domain=domain,
         name=name,
         resume_vector_id=resume_vector_id
     )

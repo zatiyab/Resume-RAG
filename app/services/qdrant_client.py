@@ -69,8 +69,7 @@ Return ONLY valid JSON, no explanation:
   "name": "",
   "location": "",        
   "skills": [],          
-  "experience_years": 0,
-  "domain": ""           
+    "experience_years": 0
 }}
 
 FEW SHOT EXAMPLES:
@@ -83,8 +82,7 @@ FEW SHOT EXAMPLES:
             "name": "Sneha Joshi",
             "location": "Pune",
             "skills": ["Python", "SQL"],
-            "experience_years": 0,
-            "domain": "Data Science"
+            "experience_years": 0
         }}
 
 
@@ -107,8 +105,7 @@ Resume to extract metadata from:
             "name": "",
             "location": "",        
             "skills": [],          
-            "experience_years": 0,
-            "domain": ""           
+            "experience_years": 0
         }
         
     
@@ -122,7 +119,6 @@ Resume to extract metadata from:
                 raw_location=metadata_content.get("location"), 
                 state=state, 
                 city=city, 
-                domain=metadata_content.get("domain"), 
                 name=metadata_content.get("name"), 
                 resume_vector_id=vector_id, 
                 db=db)
@@ -225,16 +221,16 @@ def add_vectors(user_id=None, files_to_process:list=[],db=None, duplicate_files:
     from app.vector_crud.resumes_crud import batch_add_resumes as batch_add_resumes_to_qdrant
     from app.crud.user_resumes_crud import add_user_resumes,duplicate_resume_check
     from app.crud.resume_crud import get_resume_id_by_vector_id
-    logger.info('User ID : ', user_id)
+    logger.info("User ID: %s", user_id)
     
     resumes_in_db_qdrant = [resume.resume_name for resume in list_resumes(db)]
     resume_vector_id = get_cnt_resumes(db)  # Start vector IDs from the current count of resumes in DB to avoid collisions
-    logger.info('Last Vector Id for user ', user_id, ': ', resume_vector_id)
-    logger.info('Existing Vectors for user ', user_id, ': ', resumes_in_db_qdrant)
+    logger.info("Last Vector Id for user %s: %s", user_id, resume_vector_id)
+    logger.info("Existing Vectors for user %s: %s", user_id, resumes_in_db_qdrant)
 
-    logger.info('Total No. of new resumes: ', len(files_to_process))
-    logger.info('Duplicate files to skip: ', duplicate_files)
-    logger.info('Files to process(not duplicates): ', files_to_process)
+    logger.info("Total no. of new resumes: %s", len(files_to_process))
+    logger.info("Duplicate files to skip: %s", duplicate_files)
+    logger.info("Files to process (not duplicates): %s", files_to_process)
 
     user_uuid = uuid.UUID(user_id) if isinstance(user_id, str) else user_id
 
@@ -425,7 +421,7 @@ def get_relevant_docs(user_query,user_id,k=5,vector_ids=[]):
     if vector_ids:
         must_conditions.append(HasIdCondition(has_id=vector_ids))
 
-    try:
+    try:        
         user_resumes_count = qdrant_client.count(
             collection_name="resumes",
             count_filter=Filter(

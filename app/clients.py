@@ -4,7 +4,6 @@ import cohere
 from functools import lru_cache
 from typing import Any
 from supabase import create_client
-from app.core.config import settings
 from langchain_cohere import ChatCohere
 
 @lru_cache(maxsize=1)
@@ -36,8 +35,8 @@ def get_supabase_client() -> Any:
 
 def get_llm():
     llm = ChatCohere(
-    model="command-r-plus-08-2024",
-    timeout_seconds=60,
-    cohere_api_key=settings.COHERE_API_KEY,
+        model="command-r-plus-08-2024",
+        timeout_seconds=60,
+        cohere_api_key=settings.COHERE_API_KEY,
     )
     return llm

@@ -7,20 +7,9 @@ from pydantic.config import ConfigDict
 
 
 def get_valid_filter_values(db, user_id: str) -> dict:
-    # skills and domain are PG arrays — need unnest() to get distinct values
+    # skills is a PG array — need unnest() to get distinct values
     # Join resumes with user_resumes to filter by user_id
     return {
-        "domains": [r[0] for r in db.execute(
-            text("""
-                SELECT DISTINCT unnest(r.domain) 
-                FROM resumes r
-                INNER JOIN user_resumes ur ON r.id = ur.resume_id
-                WHERE ur.user_id = :user_id 
-                AND r.domain IS NOT NULL
-            """),
-            {"user_id": user_id}
-        ).fetchall()],
-
         "skills": [r[0] for r in db.execute(
             text("""
                 SELECT DISTINCT unnest(r.skills) 
@@ -78,7 +67,6 @@ def make_filter_tool(valid: dict):
     class CandidateFilter(BaseModel):
         model_config = ConfigDict(populate_by_name=True)
         
-        domains:        List[str] = Field(..., description=f"Only pick from: {valid['domains']}")
         skills:         List[str] = Field(..., description=f"Only pick from: {valid['skills']}")
         cities:         List[str] = Field(..., description=f"Only pick from: {valid['cities']}")
         states:         List[str] = Field(..., description=f"Only pick from: {valid['states']}")
@@ -89,14 +77,12 @@ def make_filter_tool(valid: dict):
 # ── Validation ───────────────────────────────────────────────────────────────
 
 def validate_filters(raw_filters: dict, valid: dict) -> dict:
-    valid_domains = set(valid["domains"])
     valid_skills  = set(valid["skills"])
     valid_cities  = set(valid["cities"])
     valid_states  = set(valid["states"])
 
     return {
         # filter_applied is ignored — it was only there to satisfy Cohere
-        "domains":        [d for d in (raw_filters.get("domains")  or []) if d in valid_domains],
         "skills":         [s for s in (raw_filters.get("skills")   or []) if s in valid_skills],
         "cities":         [c for c in (raw_filters.get("cities")   or []) if c in valid_cities],
         "states":         [s for s in (raw_filters.get("states")   or []) if s in valid_states],
@@ -114,14 +100,6 @@ def build_sql(filters: dict, user_id: str) -> tuple:
     # Start with user_resumes join to filter by user
     conditions = ["ur.user_id = :user_id"]
     params     = {"user_id": user_id}
-
-    # Fix — cast Python list to PG array explicitly using ANY()
-    if filters.get("domains"):
-        # Expand list into named params for text() compatibility
-        domain_params = {f"domain_{i}": v for i, v in enumerate(filters["domains"])}
-        placeholders  = ",".join(f":domain_{i}" for i in range(len(filters["domains"])))
-        conditions.append(f"r.domain && ARRAY[{placeholders}]::varchar[]")
-        params.update(domain_params)
 
     if filters.get("skills"):
         skill_params = {f"skill_{i}": v for i, v in enumerate(filters["skills"])}
@@ -169,7 +147,7 @@ def retrieve_candidates(query: str, db, user_id: str) -> list:
     valid = get_valid_filter_values(db, user_id)
 
     # 2. Early return if user has no resumes yet
-    if not any([valid["domains"], valid["skills"], valid["cities"], valid["states"]]):
+    if not any([valid["skills"], valid["cities"], valid["states"]]):
         return []
 
     # 3. Bind the dynamic schema as structured output
@@ -185,7 +163,7 @@ def retrieve_candidates(query: str, db, user_id: str) -> list:
 Extract recruitment filters from this query.
 Only use values explicitly listed in each field's description.
 If no match exists, leave the field as an empty list.
-
+Try to match as many fields as possible for skills, cities, and states if there's a clear signal in the query.
 Query: {query}
         """)
     ])

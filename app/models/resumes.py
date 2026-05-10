@@ -16,7 +16,6 @@ class Resume(Base):
     raw_location = Column(VARCHAR(255), nullable=True)  # Location as text
     city = Column(VARCHAR(255), nullable=True)  # City as text
     state = Column(VARCHAR(255), nullable=True)  # State as text
-    domain = Column(ARRAY(VARCHAR(255)), nullable=True)  # Array of domains/industries
     name = Column(VARCHAR(255), nullable=True)  # Candidate's name as text
     resume_vector_id = Column(Integer, nullable=True)  # ID linking to vector store
 
