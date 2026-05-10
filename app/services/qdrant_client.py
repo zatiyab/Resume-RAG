@@ -26,35 +26,6 @@ def get_resumes_dir() -> Path:
     return RESUMES_DIR
 
 
-def _embed_text(text: str, input_type: str = "search_document") -> list[float]:
-    """Normalize Cohere embedding response to a single numeric vector.
-    
-    Args:
-        text: Text to embed
-        input_type: Type of input - "search_document" for resumes, "search_query" for user queries
-    """
-    response = co.embed(
-        inputs=[{"content": [{"type": "text", "text": text}]}],
-        model="embed-v4.0",
-        input_type=input_type,
-        embedding_types=["float"],
-    )
-
-    embeddings_obj: Any = getattr(response, "embeddings", None)
-    if embeddings_obj is not None:
-        for attr in ("float", "float_", "floats"):
-            value = getattr(embeddings_obj, attr, None)
-            if value:
-                return value[0]
-        if isinstance(embeddings_obj, list) and embeddings_obj:
-            return embeddings_obj[0]
-
-    if isinstance(response, dict):
-        maybe_embeddings = response.get("embeddings")
-        if isinstance(maybe_embeddings, list) and maybe_embeddings:
-            return maybe_embeddings[0]
-
-    raise ValueError("Could not extract float embedding from Cohere response")
 
 def llm_extract_metadata(resume:str,db,file_path,resume_name,vector_id):
     EXTRACTION_PROMPT = """
@@ -281,7 +252,7 @@ def add_vectors(user_id=None, files_to_process:list=[],db=None, duplicate_files:
     resume_vector_ids = []
     
     for resume, resume_data in resumes_data_dict.items():
-        logger.info(f'At {resume_vector_id}/{len(resumes_data_dict)}, {resume}') 
+        logger.info(f'At {resume_vector_id + 1}/{len(resumes_data_dict)}, {resume}') 
         
 
         resume_data= basic_text_normalization(resume_data)

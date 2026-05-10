@@ -22,9 +22,8 @@ def main(k, user_query, hist_id, user_id, db, chat_group_id=None):
     selected_files = []
     retrieved_resume_context = ""
     history_entry = ""
-    initialize_app_data()
-    logger.info('\n\n\n')
-    logger.info('-'*100)
+    # initialize_app_data()
+  
     logger.info("--- MAIN FUNCTION STARTED ---")
 
     # Store the original user input (could be JD or a regular query)
@@ -47,7 +46,7 @@ def main(k, user_query, hist_id, user_id, db, chat_group_id=None):
                 k_similar=0      # Top 2 semantically similar for candidate details
             )
             logger.debug(f"--- DEBUG: Prepared History Context Length: {len(final_history_for_llm_prompt)} ---")
-            final_history_for_llm_prompt = llm.invoke(f"Summarize the following conversation history but dont lose important data such as candidate information: {final_history_for_llm_prompt}").content
+            # final_history_for_llm_prompt = llm.invoke(f"Summarize the following conversation history but dont lose important data such as candidate information: {final_history_for_llm_prompt}").content
             
             # --- Step 2: Retrieve Relevant Resumes (for "Candidate Context" in prompt) ---
             retrieved_resume_context, selected_files = "", []
@@ -65,7 +64,7 @@ def main(k, user_query, hist_id, user_id, db, chat_group_id=None):
                 k_recent=2,      # Last 2 recent for pronoun resolution
                 k_similar=1     # Top 2 semantically similar for candidate details
             )
-            final_history_for_llm_prompt =llm.invoke(f"Summarize the following conversation history but dont lose important data such as candidate information: {final_history_for_llm_prompt}").content
+            # final_history_for_llm_prompt =llm.invoke(f"Summarize the following conversation history but dont lose important data such as candidate information: {final_history_for_llm_prompt}").content
             logger.debug(f"--- DEBUG: Prepared History Context Length: {len(final_history_for_llm_prompt)} ---")
             # --- Step 2: Retrieve Relevant Resumes (for "Candidate Context" in prompt) ---
             logger.debug(f"--- DEBUG: Calling get_relevant_docs with processed query: '{user_query[:100]}' ---")
@@ -75,7 +74,7 @@ def main(k, user_query, hist_id, user_id, db, chat_group_id=None):
                 k=k,
                 vector_ids=vector_ids
             )
-            retrieved_resume_context = llm.invoke(f"Summarize the following candidates data for relevance to the question keep summary for each candidate seperate but dont lose important data such as candidate information: {retrieved_resume_context}").content
+            # retrieved_resume_context = llm.invoke(f"Summarize the following candidates data for relevance to the question keep summary for each candidate seperate but dont lose important data such as candidate information: {retrieved_resume_context}").content
         logger.debug(f"--- DEBUG: Retrieved Resume Context Length: {len(retrieved_resume_context)} ---")
 
     except Exception as e:
