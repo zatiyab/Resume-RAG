@@ -531,8 +531,10 @@ def get_relevant_docs(user_query,user_id,k=5,vector_ids=[]):
 
 
 def initialize_app_data():
+    from app.core.config import settings
     logger.info("--- Initializing collections and data... ---")
-
+    logger.info("Qdrant URL: %s", settings.QDRANT_URL if qdrant_client else "Qdrant client not initialized")
+    logger.info("Qdrant Collections: %s", qdrant_client.get_collections())
     if qdrant_client is None:
         raise RuntimeError("Qdrant qdrant_client is not initialized. Check QDRANT_URL, QDRANT_API_KEY and network connectivity.")
 

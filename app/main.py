@@ -2,6 +2,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.clients import get_qdrant
+qdrant_client = get_qdrant()
 
 from app.api.chat_routes import router as chat_router
 from app.api.auth_routes import router as auth_router   
@@ -11,6 +13,7 @@ from app.core.config import settings
 from app.services.qdrant_client import initialize_app_data
 from app.core.logger import logger
 
+print(qdrant_client.collection_exists("resumes"))
 # FastAPI Lifespan Context Manager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
