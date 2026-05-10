@@ -36,7 +36,6 @@ gunicorn==26.0.0
 h11==0.16.0
 h2==4.3.0
 hf-xet==1.4.3
--e git+https://github.com/zatiyab/Resume-RAG.git@09dc8cb4d9e0c720641870c67f7fe69809af3f8e#egg=HireMind
 hpack==4.1.0
 httpcore==1.0.9
 httpx==0.28.1
@@ -97,7 +96,6 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.2.2
 python-jose==3.5.0
 python-multipart==0.0.26
-pywin32==311
 PyYAML==6.0.3
 qdrant-client==1.17.1
 realtime==2.29.0
