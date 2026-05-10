@@ -89,7 +89,7 @@ async def upload_resumes(files: list[UploadFile] = File(...), user_id: str = Non
                 stored_name = f"{safe_stem}.pdf"
             try:
                 path = await asyncio.to_thread(upload_resume_to_storage, content, stored_name)
-                logger.info("Uploaded to Supabase at:", path)
+                logger.info("Uploaded to Supabase at: %s", path)
             except ValueError as e:
                 is_duplicate.append(stored_name)
                 logger.info(f"Duplicate file skipped: {stored_name} \n {e}")

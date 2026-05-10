@@ -10,7 +10,7 @@ from app.api.auth_routes import router as auth_router
 from app.api.resume_routes import router as resume_router
 
 from app.core.config import settings
-from app.services.qdrant_client import initialize_app_data
+from app.setup.qdrant_setup import initialize_app_data
 from app.core.logger import logger
 
 

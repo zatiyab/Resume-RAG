@@ -73,7 +73,7 @@ def remove_same_files(folder):
     for resume in resumes:
         resume = resume.rstrip('.pdf')
         if re.search(pattern,resume):
-            logger.info('Copy : ',resume)
+            logger.info('Copy : %s', resume)
 
 def basic_text_normalization(text: str) -> str:
     """Basic cleaning that should be applied to all text"""

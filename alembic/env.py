@@ -17,7 +17,6 @@ sys.path.insert(0, str(project_root))
 
 from app.core.config import settings  
 from app.core.database import Base  
-import app.models  
 
 target_metadata = Base.metadata
 

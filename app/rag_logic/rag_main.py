@@ -1,7 +1,7 @@
 from app.core.logger import logger
 from app.services.qdrant_client import (get_relevant_docs,
-                                        initialize_app_data,
                                         get_hybrid_history)
+from app.setup.qdrant_setup import initialize_app_data
 from app.vector_crud.history_crud import add_history
 from langchain_core.runnables import RunnableMap
 from langchain_core.prompts import PromptTemplate
